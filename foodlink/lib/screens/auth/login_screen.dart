@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import '../../data/mock_users.dart';
 import '../../models/user.dart';
 
-/// Pantalla de inicio de sesión de FoodLink
+//// Pantalla de inicio de sesión de FoodLink
+/// 
 /// Caso de uso: C1 - Iniciar sesión
+/// 
+/// Esta pantalla implementa validaciones de seguridad:
+/// - validación de ID de empleado con formato y obligatoriedad
+/// - validación de contraseña con mínimo 8 caracteres
+/// - manejo de errores con mensajes genéricos
+/// - protección contra ataques de fuerza bruta con bloqueo temporal
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -72,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✅ Bienvenido ${usuario.nombre}'),
+              content: Text('Bienvenido ${usuario.nombre}'),
               backgroundColor: Colors.green,
             ),
           );
@@ -256,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  '📧 Contacta al administrador para restablecer tu contraseña',
+                                  'Contacta al administrador para restablecer tu contraseña',
                                 ),
                                 backgroundColor: Colors.blue,
                               ),

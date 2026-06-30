@@ -1,5 +1,5 @@
-/// Modelo de Usuario para FoodLink
-/// Basado en los casos de uso C1, C3 y C9 del documento S-SDLC
+/// Modelo de Usuario para la app
+/// casos de uso C1, C3 y C9 
 class User {
   final int id;
   final String nombre;
