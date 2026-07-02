@@ -62,8 +62,8 @@ def crear_admin_por_defecto(db: Session) -> Usuario:
         return administrador
     administrador = Usuario(
         numero_empleado=ADMIN_POR_DEFECTO_EMPLEADO,
-        nombre="Administrador",
-        apellido="PorDefecto",
+        nombre="Adminis",
+        apellido="trador",
         hash_contrasena=obtener_hash_contrasena(ADMIN_POR_DEFECTO_CONTRASENA),
         rol="admin",
         estado="active",
