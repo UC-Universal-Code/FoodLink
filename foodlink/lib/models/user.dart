@@ -1,41 +1,59 @@
-/// Modelo de Usuario para la app
-/// casos de uso C1, C3 y C9 
+// lib/models/user.dart
+
+/// Modelo de Usuario para FoodLink
+/// Basado en los casos de uso C1, C3 y C9 del documento S-SDLC
 class User {
   final int id;
+  final String numeroEmpleado;
   final String nombre;
-  final String empleadoId; // ID de empleado 
+  final String apellido;
+  final int? departamentoId;
+  final int? turnoId;
   final String rol; // "admin", "cocinero", "trabajador"
-  final String turno; // "Matutino", "Vespertino", "Nocturno"
-  final bool activo;
+  final String estado;
+  final DateTime creadoEn;
+  final DateTime actualizadoEn;
 
   User({
     required this.id,
+    required this.numeroEmpleado,
     required this.nombre,
-    required this.empleadoId,
+    required this.apellido,
+    this.departamentoId,
+    this.turnoId,
     required this.rol,
-    required this.turno,
-    required this.activo,
+    required this.estado,
+    required this.creadoEn,
+    required this.actualizadoEn,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as int,
+      numeroEmpleado: json['numero_empleado'] as String,
       nombre: json['nombre'] as String,
-      empleadoId: json['empleadoId'] as String,
+      apellido: json['apellido'] as String,
+      departamentoId: json['departamento_id'] as int?,
+      turnoId: json['turno_id'] as int?,
       rol: json['rol'] as String,
-      turno: json['turno'] as String,
-      activo: json['activo'] as bool,
+      estado: json['estado'] as String,
+      creadoEn: DateTime.parse(json['creado_en'] as String),
+      actualizadoEn: DateTime.parse(json['actualizado_en'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'numero_empleado': numeroEmpleado,
       'nombre': nombre,
-      'empleadoId': empleadoId,
+      'apellido': apellido,
+      'departamento_id': departamentoId,
+      'turno_id': turnoId,
       'rol': rol,
-      'turno': turno,
-      'activo': activo,
+      'estado': estado,
+      'creado_en': creadoEn.toIso8601String(),
+      'actualizado_en': actualizadoEn.toIso8601String(),
     };
   }
 }
