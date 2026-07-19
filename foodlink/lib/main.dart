@@ -1,12 +1,13 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/user_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/admin_home_screen.dart';
 import 'screens/cocinero_home_screen.dart';
 import 'screens/trabajador_home_screen.dart';
+import 'screens/admin/user_list_screen.dart';
+import 'screens/admin/create_user_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,8 +18,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => AuthProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        ChangeNotifierProvider(create: (context) => UserProvider()),
+      ],
       child: MaterialApp(
         title: 'FoodLink',
         debugShowCheckedModeBanner: false,
@@ -56,6 +60,8 @@ class MyApp extends StatelessWidget {
         routes: {
           '/login': (context) => const LoginScreen(),
           '/admin': (context) => const AdminHome(),
+          '/admin/users': (context) => const UserListScreen(),
+          '/admin/users/create': (context) => const CreateUserScreen(),
           '/cocinero': (context) => const CocineroHome(),
           '/trabajador': (context) => const TrabajadorHome(),
         },

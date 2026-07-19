@@ -8,8 +8,16 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import connection
-from database.models import Usuario
-from schemas import PeticionLogin, TokenAcceso, DatosToken, UsuarioCrear, UsuarioLeer
+from database.models import Usuario, Turno, Departamento  
+from schemas import (
+    PeticionLogin,
+    TokenAcceso,
+    DatosToken,
+    UsuarioCrear,
+    UsuarioLeer,
+    TurnoLeer,          
+    DepartamentoLeer    
+)
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
@@ -122,7 +130,7 @@ def obtener_usuario_admin_actual(usuario_actual: Usuario = Depends(obtener_usuar
         )
     return usuario_actual
 
-# endpoints de usuario
+# ---------- ENDPOINTS DE USUARIO ----------
 
 @router.post("/login", response_model=TokenAcceso)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(obtener_bd)):
@@ -166,6 +174,37 @@ def crear_usuario(usuario_in: UsuarioCrear, db: Session = Depends(obtener_bd), _
 @router.get("/me", response_model=UsuarioLeer)
 def obtener_mis_datos(usuario_actual: Usuario = Depends(obtener_usuario_actual)):
     return usuario_actual
+
+
+@router.get("/", response_model=list[UsuarioLeer])
+def obtener_usuarios(
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    """
+    Obtiene la lista de todos los usuarios registrados en el sistema.
+    Solo accesible para usuarios con rol de administrador.
+    """
+    usuarios = db.query(Usuario).all()
+    return usuarios
+
+
+@router.get("/turnos", response_model=list[TurnoLeer])
+def obtener_turnos(db: Session = Depends(obtener_bd)):
+    """
+    Obtiene la lista de todos los turnos disponibles.
+    """
+    turnos = db.query(Turno).all()
+    return turnos
+
+
+@router.get("/departamentos", response_model=list[DepartamentoLeer])
+def obtener_departamentos(db: Session = Depends(obtener_bd)):
+    """
+    Obtiene la lista de todos los departamentos disponibles.
+    """
+    departamentos = db.query(Departamento).all()
+    return departamentos
 
 
 @router.get("/{numero_empleado}", response_model=UsuarioLeer)

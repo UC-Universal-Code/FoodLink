@@ -45,11 +45,8 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Alta, baja y modificación de usuarios',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Gestión de usuarios (C3, C9)'),
-                  ),
-                );
+                // Navegar a la pantalla de lista de usuarios
+                Navigator.pushNamed(context, '/admin/users');
               },
             ),
             _buildMenuItem(

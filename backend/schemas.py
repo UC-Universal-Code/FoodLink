@@ -34,3 +34,24 @@ class UsuarioLeer(UsuarioBase):
 
     class Config:
         from_attributes = True
+        
+        
+        
+class TurnoLeer(BaseModel):
+    id: int
+    nombre: str
+    hora_inicio: str
+    hora_fin: str
+    dias: str
+
+    class Config:
+        from_attributes = True
+
+
+class DepartamentoLeer(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+
+    class Config:
+        from_attributes = True
