@@ -5,6 +5,8 @@ from database.connection import engine, verificar_conexion
 from database.models import Base
 from routers.users import crear_admin_por_defecto, router as usuarios_router
 
+from routers import users, menu
+
 app = FastAPI(
     title="FoodLink Backend",
     description="API backend con FastAPI y documentacion Swagger UI.",
@@ -37,3 +39,4 @@ se expone en la ruta / y que devuelve un mensaje de bienvenida"""
 app.include_router(usuarios_router)
 """esta linea de codigo nos permite importar el modulo de users
 y exponer sus endpoints en la aplicacion FastAPI"""
+app.include_router(menu.router)
