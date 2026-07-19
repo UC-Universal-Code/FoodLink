@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'cocinero/crear_menu_screen.dart';
+import 'cocinero/mis_menus_screen.dart';
 
 class CocineroHome extends StatelessWidget {
   const CocineroHome({super.key});
@@ -45,9 +47,10 @@ class CocineroHome extends StatelessWidget {
               subtitle: 'Registrar platillos para la semana (C4)',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Crear menú semanal (C4)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CrearMenuScreen(),
                   ),
                 );
               },
@@ -59,9 +62,10 @@ class CocineroHome extends StatelessWidget {
               subtitle: 'Modificar platillos del menú (C5)',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Editar menú (C5)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MisMenusScreen(),
                   ),
                 );
               },
@@ -73,9 +77,10 @@ class CocineroHome extends StatelessWidget {
               subtitle: 'Consultar menú publicado',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Visualizar menú (C6)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MisMenusScreen(),
                   ),
                 );
               },
