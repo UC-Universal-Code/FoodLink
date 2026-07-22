@@ -297,7 +297,7 @@ def eliminar_menu_semanal(
 
 
 # ==========================================
-# ENDPOINTS PARA VISUALIZAR MENÚ (CASO DE USO C6)
+# RUTAS ESTÁTICAS Y ESPECÍFICAS (DEBEN IR PRIMERO)
 # ==========================================
 
 @router.get("/semanal/actual", response_model=MenuSemanalLeer)
@@ -315,6 +315,51 @@ def obtener_menu_actual(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No hay menú disponible para el turno {usuario_actual.turno} en la semana actual"
+        )
+    return menu
+
+
+@router.get("/semanal/mis-menus", response_model=List[MenuSemanalLeer])
+def obtener_mis_menus(
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual)
+):
+    if usuario_actual.rol not in ["cocinero", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los cocineros pueden ver sus menús"
+        )
+    menus = db.query(MenuSemanal).filter(
+        MenuSemanal.creado_por == usuario_actual.numero_empleado
+    ).order_by(MenuSemanal.semana_inicio.desc()).all()
+    return menus
+
+
+@router.get("/semanal/todos", response_model=List[MenuSemanalLeer])
+def obtener_todos_menus(
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    menus = db.query(MenuSemanal).order_by(MenuSemanal.semana_inicio.desc()).all()
+    return menus
+
+
+@router.get("/semanal/fecha", response_model=MenuSemanalLeer)
+def obtener_menu_por_fecha(
+    fecha: date,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual)
+):
+    if not usuario_actual.turno:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario no tiene un turno asignado"
+        )
+    menu = obtener_menu_activo_por_turno(db, usuario_actual.turno, fecha)
+    if not menu:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No hay menú disponible para el turno {usuario_actual.turno} en la fecha {fecha}"
         )
     return menu
 
@@ -342,54 +387,9 @@ def obtener_menu_por_turno(
     return menu
 
 
-@router.get("/semanal/fecha", response_model=MenuSemanalLeer)
-def obtener_menu_por_fecha(
-    fecha: date,
-    db: Session = Depends(obtener_bd),
-    usuario_actual: Usuario = Depends(obtener_usuario_actual)
-):
-    if not usuario_actual.turno:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario no tiene un turno asignado"
-        )
-    menu = obtener_menu_activo_por_turno(db, usuario_actual.turno, fecha)
-    if not menu:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No hay menú disponible para el turno {usuario_actual.turno} en la fecha {fecha}"
-        )
-    return menu
-
-
-# --- RUTAS ESTÁTICAS DEBEN IR PRIMERO ---
-
-@router.get("/semanal/mis-menus", response_model=List[MenuSemanalLeer])
-def obtener_mis_menus(
-    db: Session = Depends(obtener_bd),
-    usuario_actual: Usuario = Depends(obtener_usuario_actual)
-):
-    if usuario_actual.rol not in ["cocinero", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo los cocineros pueden ver sus menús"
-        )
-    menus = db.query(MenuSemanal).filter(
-        MenuSemanal.creado_por == usuario_actual.numero_empleado
-    ).order_by(MenuSemanal.semana_inicio.desc()).all()
-    return menus
-
-
-@router.get("/semanal/todos", response_model=List[MenuSemanalLeer])
-def obtener_todos_menus(
-    db: Session = Depends(obtener_bd),
-    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
-):
-    menus = db.query(MenuSemanal).order_by(MenuSemanal.semana_inicio.desc()).all()
-    return menus
-
-
-# --- RUTA CON PARÁMETRO DINÁMICO AL FINAL ---
+# ==========================================
+# RUTAS CON PARÁMETROS DINÁMICOS (AL FINAL DE TODO)
+# ==========================================
 
 @router.get("/semanal/{menu_id}", response_model=MenuSemanalLeer)
 def obtener_menu_por_id(

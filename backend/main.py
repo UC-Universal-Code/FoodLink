@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-
+from fastapi.middleware.cors import CORSMiddleware
 from database import connection
 from database.connection import engine, verificar_conexion
 from database.models import Base
@@ -11,6 +11,13 @@ app = FastAPI(
     title="FoodLink Backend",
     description="API backend con FastAPI y documentacion Swagger UI.",
     version="0.1.0",
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite peticiones desde Flutter Web
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],  # Permite enviar encabezados como Authorization (Bearer Token)
 )
 
 @app.on_event("startup")
