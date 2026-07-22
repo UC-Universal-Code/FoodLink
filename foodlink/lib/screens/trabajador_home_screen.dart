@@ -1,10 +1,77 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
+import '../../models/menu_model.dart';
+import '../../models/platillo.dart';
 
-class TrabajadorHome extends StatelessWidget {
+class TrabajadorHome extends StatefulWidget {
   const TrabajadorHome({super.key});
 
   @override
+  State<TrabajadorHome> createState() => _TrabajadorHomeState();
+}
+
+class _TrabajadorHomeState extends State<TrabajadorHome> {
+  MenuSemanal? menuSemanal;
+  List<Platillo> platillosHoy = [];
+  bool isLoading = true;
+  String? errorMessage;
+  String turnoUsuario = '';
+
+  final List<String> diasSemana = [
+    'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarMenuActual();
+  }
+
+  Future<void> _cargarMenuActual() async {
+    try {
+      final apiService = ApiService();
+      // Usamos obtenerMenuActual() que ya existe en tu ApiService con Dio
+      final data = await apiService.obtenerMenuActual();
+      
+      if (data == null) {
+        setState(() {
+          errorMessage = 'No hay un menú activo para tu turno actualmente.';
+          isLoading = false;
+        });
+        return;
+      }
+
+      final menu = MenuSemanal.fromJson(data);
+      
+      // Día de la semana actual (1 = Lunes, 7 = Domingo)
+      final hoyIndex = DateTime.now().weekday - 1;
+      final diaHoyTexto = diasSemana[hoyIndex];
+
+      // Filtrar ítems del día que estén disponibles
+      final itemsHoy = menu.items.where((item) {
+        final diaItem = item.diaSemana.toLowerCase();
+        return (diaItem == diaHoyTexto || diaItem.contains(diaHoyTexto)) && item.disponible;
+      }).toList();
+
+      setState(() {
+        menuSemanal = menu;
+        platillosHoy = itemsHoy;
+        turnoUsuario = menu.turno;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString().replaceAll('Exception: ', '');
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final hoy = DateTime.now();
+    final fechaTexto = '${_obtenerNombreDia(hoy.weekday)} ${hoy.day} de ${_obtenerNombreMes(hoy.month)}';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('FoodLink - Trabajador'),
@@ -13,80 +80,115 @@ class TrabajadorHome extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.exit_to_app),
-            onPressed: () {
+            onPressed: () async {
+              final apiService = ApiService();
+              await apiService.logout();
+              if (!mounted) return;
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Menú del Día',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF20303D),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Turno Matutino - Lunes 23 de Junio',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildPlatilloCard(
-                    nombre: 'Tacos de Carnitas',
-                    descripcion: 'Tortillas de maíz con carnitas, cebolla y cilantro',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Detalles del platillo'),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.restaurant_menu, size: 64, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, color: Colors.grey),
                         ),
-                      );
-                    },
-                  ),
-                  _buildPlatilloCard(
-                    nombre: 'Sopa de Verduras',
-                    descripcion: 'Caldo de verduras frescas con fideos',
-                    onTap: () {},
-                  ),
-                  _buildPlatilloCard(
-                    nombre: 'Ensalada César',
-                    descripcion: 'Lechuga, pollo, crutones y aderezo César',
-                    onTap: () {},
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Funcionalidad: Reportar incidencia (C7)'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() => isLoading = true);
+                            _cargarMenuActual();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF20303D),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Reintentar'),
+                        )
+                      ],
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF20303D),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Menú del Día',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF20303D),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Turno ${_capitalize(turnoUsuario)} - $fechaTexto',
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: platillosHoy.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'No hay platillos disponibles para hoy.',
+                                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: platillosHoy.length,
+                                itemBuilder: (context, index) {
+                                  final item = platillosHoy[index];
+                                  return _buildPlatilloCard(
+                                    nombre: item.nombre,
+                                    descripcion: item.descripcion,
+                                    precio: item.precio,
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Platillo: ${item.nombre}'),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Funcionalidad: Reportar incidencia (C7)'),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF20303D),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Reportar Incidencia'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Text('Reportar Incidencia'),
-              ),
-            ),
-          ],
-        ),
-      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         items: const [
@@ -121,6 +223,7 @@ class TrabajadorHome extends StatelessWidget {
   Widget _buildPlatilloCard({
     required String nombre,
     required String descripcion,
+    required double precio,
     required VoidCallback onTap,
   }) {
     return Card(
@@ -134,9 +237,41 @@ class TrabajadorHome extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(descripcion),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (precio > 0)
+              Text(
+                '\$${precio.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF20303D),
+                ),
+              ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios, size: 16),
+          ],
+        ),
         onTap: onTap,
       ),
     );
+  }
+
+  String _capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
+  String _obtenerNombreDia(int weekday) {
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    return dias[weekday - 1];
+  }
+
+  String _obtenerNombreMes(int month) {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return meses[month - 1];
   }
 }
