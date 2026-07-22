@@ -112,23 +112,36 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
     );
   }
 
-  void _actualizarMenu() async {
+    void _actualizarMenu() async {
     try {
-      final menuActualizado = MenuSemanal(
-        id: menu!.id,
-        semanaInicio: menu!.semanaInicio,
-        semanaFin: menu!.semanaFin,
-        turno: menu!.turno,
-        activo: activo,
-        creadoPor: menu!.creadoPor,
-        creadoEn: menu!.creadoEn,
-        actualizadoEn: menu!.actualizadoEn,
-        items: menu!.items,
-      );
-      
+      // 1. Mapeamos cada platillo asegurando los nombres de atributos que espera Pydantic
+      final List<Map<String, dynamic>> itemsPayload = menu!.items.map((item) {
+        return {
+          'dia_semana': item.diaSemana,      // Manda "lunes", "martes", etc.
+          'tipo_comida': item.tipoComida,    // Manda "almuerzo", "cena", etc.
+          'nombre_plato': item.nombre,       // Atributo exacto en Python
+          'descripcion': item.descripcion,
+          'ingredientes': item.ingredientes,
+          'imagen_url': item.imagenUrl,
+          'limite_porciones': item.limitePorciones,
+          'precio': item.precio,
+          'disponible': item.disponible,
+        };
+      }).toList();
+
+      // 2. Construimos el JSON principal del menú
+      final Map<String, dynamic> body = {
+        'activo': activo,
+        'turno': menu!.turno,
+        'semana_inicio': menu!.semanaInicio.toIso8601String().split('T')[0],
+        'semana_fin': menu!.semanaFin.toIso8601String().split('T')[0],
+        'items': itemsPayload,
+      };
+
       final apiService = ApiService();
-      await apiService.actualizarMenu(widget.menuId, menuActualizado.toJson());
-      
+      await apiService.actualizarMenu(widget.menuId, body);
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Menú actualizado correctamente'),
@@ -137,9 +150,10 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
       );
       Navigator.pop(context);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('Error al actualizar: $e'),
           backgroundColor: Colors.red,
         ),
       );
