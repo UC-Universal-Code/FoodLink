@@ -466,15 +466,19 @@ def editar_menu_semanal(
         menu.activo = menu_data.activo
     
     # Actualizar items del menú si se enviaron
+    # Actualizar items del menú si se enviaron
     if menu_data.items is not None:
         # Eliminar items viejos
         db.query(MenuItem).filter(MenuItem.menu_semanal_id == menu_id).delete()
         
         # Agregar los items nuevos con conversión segura
         for item_data in menu_data.items:
-            # Extraer string seguro de Enum o str
-            dia = str(item_data.dia_semana.value if hasattr(item_data.dia_semana, 'value') else item_data.dia_semana).lower()
-            tipo = str(item_data.tipo_comida.value if hasattr(item_data.tipo_comida, 'value') else item_data.tipo_comida).lower()
+            # Extraer valor de Enum o String si existe
+            dia_raw = item_data.dia_semana.value if hasattr(item_data.dia_semana, 'value') else item_data.dia_semana
+            dia = str(dia_raw).lower() if dia_raw is not None else None
+
+            tipo_raw = item_data.tipo_comida.value if hasattr(item_data.tipo_comida, 'value') else item_data.tipo_comida
+            tipo = str(tipo_raw).lower() if tipo_raw is not None else None
 
             nuevo_item = MenuItem(
                 menu_semanal_id=menu_id,
