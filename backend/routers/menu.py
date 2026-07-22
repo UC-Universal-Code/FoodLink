@@ -391,21 +391,123 @@ def obtener_menu_por_turno(
 # RUTAS CON PARÁMETROS DINÁMICOS (AL FINAL DE TODO)
 # ==========================================
 
-@router.get("/semanal/{menu_id}", response_model=MenuSemanalLeer)
-def obtener_menu_por_id(
+@router.put("/semanal/{menu_id}", response_model=MenuSemanalLeer)
+def editar_menu_semanal(
     menu_id: int,
+    menu_data: MenuSemanalActualizar,
     db: Session = Depends(obtener_bd),
     usuario_actual: Usuario = Depends(obtener_usuario_actual)
 ):
+    """
+    C5 - Editar menú semanal por turno
+    """
+    # Verificar permisos de rol
+    if usuario_actual.rol not in ["cocinero", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los cocineros y administradores pueden editar menús"
+        )
+    
+    # Buscar el menú
     menu = db.query(MenuSemanal).filter(MenuSemanal.id == menu_id).first()
     if not menu:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Menú no encontrado"
         )
-    if usuario_actual.rol != "admin" and usuario_actual.turno != menu.turno:
+    
+    # Verificar que el cocinero sea el creador o admin
+    if usuario_actual.rol != "admin" and menu.creado_por != usuario_actual.numero_empleado:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para ver este menú"
+            detail="No tienes permiso para editar este menú"
+        )
+    
+    # Verificar que la semana no haya terminado
+    hoy = date.today()
+    if menu.semana_fin < hoy:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede modificar un menú de una semana que ya pasó"
+        )
+    
+    # Actualizar fechas si vienen en los datos
+    if menu_data.semana_inicio is not None or menu_data.semana_fin is not None:
+        nueva_inicio = menu_data.semana_inicio or menu.semana_inicio
+        nueva_fin = menu_data.semana_fin or menu.semana_fin
+        validar_semana(nueva_inicio, nueva_fin)
+        menu.semana_inicio = nueva_inicio
+        menu.semana_fin = nueva_fin
+    
+    if menu_data.turno is not None:
+        menu.turno = menu_data.turno
+    
+    if menu_data.activo is not None:
+        if menu_data.activo and not menu.activo:
+            fecha_inicio = menu_data.semana_inicio or menu.semana_inicio
+            fecha_fin = menu_data.semana_fin or menu.semana_fin
+            turno = menu_data.turno or menu.turno
+            
+            otro_activo = db.query(MenuSemanal).filter(
+                and_(
+                    MenuSemanal.id != menu_id,
+                    MenuSemanal.activo == True,
+                    MenuSemanal.turno == turno,
+                    MenuSemanal.semana_inicio <= fecha_fin,
+                    MenuSemanal.semana_fin >= fecha_inicio
+                )
+            ).first()
+            
+            if otro_activo:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Ya hay un menú activo para el turno {turno} en este período"
+                )
+        menu.activo = menu_data.activo
+    
+    # Actualizar items del menú si se enviaron
+    if menu_data.items is not None:
+        # Eliminar items viejos
+        db.query(MenuItem).filter(MenuItem.menu_semanal_id == menu_id).delete()
+        
+        # Agregar los items nuevos con conversión segura
+        for item_data in menu_data.items:
+            # Extraer string seguro de Enum o str
+            dia = str(item_data.dia_semana.value if hasattr(item_data.dia_semana, 'value') else item_data.dia_semana).lower()
+            tipo = str(item_data.tipo_comida.value if hasattr(item_data.tipo_comida, 'value') else item_data.tipo_comida).lower()
+
+            nuevo_item = MenuItem(
+                menu_semanal_id=menu_id,
+                dia_semana=dia,
+                tipo_comida=tipo,
+                nombre_plato=item_data.nombre_plato,
+                descripcion=item_data.descripcion,
+                ingredientes=item_data.ingredientes,
+                imagen_url=item_data.imagen_url,
+                limite_porciones=item_data.limite_porciones,
+                precio=item_data.precio,
+                disponible=item_data.disponible if item_data.disponible is not None else True
+            )
+            db.add(nuevo_item)
+    
+    menu.actualizado_en = datetime.utcnow()
+    db.commit()
+    db.refresh(menu)
+    return menu
+
+@router.get("/semanal/{menu_id}", response_model=MenuSemanalLeer)
+def obtener_menu_por_id(
+    menu_id: int,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual)
+):
+    """
+    Obtener un menú semanal específico por su ID
+    """
+    menu = db.query(MenuSemanal).filter(MenuSemanal.id == menu_id).first()
+    if not menu:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Menú no encontrado"
         )
     return menu
