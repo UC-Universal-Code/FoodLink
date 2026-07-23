@@ -300,22 +300,57 @@ def eliminar_menu_semanal(
 # RUTAS ESTÁTICAS Y ESPECÍFICAS (DEBEN IR PRIMERO)
 # ==========================================
 
+# En backend/routers/menu.py
 @router.get("/semanal/actual", response_model=MenuSemanalLeer)
 def obtener_menu_actual(
     db: Session = Depends(obtener_bd),
     usuario_actual: Usuario = Depends(obtener_usuario_actual)
 ):
-    if not usuario_actual.turno:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario no tiene un turno asignado"
+    print("\n--- DEBUG MENU ACTUAL ---")
+    print(f"1. ID Usuario: {usuario_actual.id}, Turno ID: {getattr(usuario_actual, 'turno_id', None)}")
+
+    # Obtener el nombre del turno desde la tabla turnos
+    turno_nombre = None
+    if hasattr(usuario_actual, 'turno_id') and usuario_actual.turno_id:
+        from database.models import Turno
+        turno_obj = db.query(Turno).filter(Turno.id == usuario_actual.turno_id).first()
+        if turno_obj:
+            turno_nombre = turno_obj.nombre
+    
+    print(f"2. Nombre de Turno resuelto: '{turno_nombre}'")
+
+    # Si no encontramos nombre de turno, usamos el fallback
+    if not turno_nombre:
+        turno_nombre = "Vespertino" # Fallback para pruebas
+
+    fecha_hoy = date.today()
+    print(f"3. Fecha de hoy usada para validar: {fecha_hoy}")
+
+    # Consulta
+    menu = db.query(MenuSemanal).filter(
+        and_(
+            MenuSemanal.activo == True,
+            MenuSemanal.turno.ilike(f"%{turno_nombre}%"),
+            MenuSemanal.semana_inicio <= fecha_hoy,
+            MenuSemanal.semana_fin >= fecha_hoy
         )
-    menu = obtener_menu_activo_por_turno(db, usuario_actual.turno)
+    ).first()
+
     if not menu:
+        # Imprimimos en consola todos los menús guardados para ver qué tienen cargado
+        todos_menus = db.query(MenuSemanal).all()
+        print("4. Menús encontrados en BD actualmente:")
+        for m in todos_menus:
+            print(f"   -> ID: {m.id} | Turno: '{m.turno}' | Activo: {m.activo} | Inicio: {m.semana_inicio} | Fin: {m.semana_fin}")
+        print("-------------------------\n")
+        
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No hay menú disponible para el turno {usuario_actual.turno} en la semana actual"
+            detail=f"No hay menú disponible para el turno {turno_nombre} en la semana actual"
         )
+
+    print("5. ¡MENÚ ENCONTRADO CON ÉXITO!")
+    print("-------------------------\n")
     return menu
 
 
