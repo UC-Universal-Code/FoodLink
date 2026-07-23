@@ -4,9 +4,15 @@ import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
 class TrabajadorHome extends StatefulWidget {
+<<<<<<< HEAD
 final String? turno;
 
   const TrabajadorHome({super.key, this.turno});
+=======
+  final String turno;
+
+  const TrabajadorHome({super.key, required this.turno});
+>>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
 
   @override
   State<TrabajadorHome> createState() => _TrabajadorHomeState();
@@ -18,7 +24,8 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   bool isLoading = true;
   String? errorMessage;
   String turnoUsuario = '';
-
+  
+  MenuSemanal? menuActual;
   DateTime fechaSeleccionada = DateTime.now();
 
   final List<String> diasSemana = [
@@ -34,6 +41,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
+<<<<<<< HEAD
 
       setState(() {
         isLoading = true;
@@ -41,6 +49,11 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
 
       // Llama a la API sin argumentos, ya que el token detecta el turno solo
       final data = await apiService.obtenerMenuActual(); 
+=======
+      
+      // 1. Pásale el turno del trabajador (o la variable donde lo tengas guardado)
+      final data = await apiService.obtenerMenuActual({'turno': widget.turno});
+>>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
       
       if (data == null) {
         if (!mounted) return;
@@ -53,17 +66,28 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
 
       if (!mounted) return;
       setState(() {
+<<<<<<< HEAD
         menuSemanal = MenuSemanal.fromJson(data);
+=======
+        menuActual = MenuSemanal.fromJson(data);
+>>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
         isLoading = false;
         errorMessage = null;
       });
 
+<<<<<<< HEAD
       _filtrarPlatillosPorFecha();
 
     } catch (e) {
       if (!mounted) return;
       setState(() {
         errorMessage = 'Error al obtener menú: $e';
+=======
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = 'Error al cargar el menú: $e';
+>>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
         isLoading = false;
       });
     }
@@ -194,7 +218,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Turno ${_capitalize(turnoUsuario)} - $fechaTexto',
+                              'Turno ${_capitalize(widget.turno)} - $fechaTexto',
                               style: const TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ),

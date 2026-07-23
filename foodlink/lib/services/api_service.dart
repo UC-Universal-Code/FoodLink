@@ -221,13 +221,21 @@ class ApiService {
   }
 
   /// Obtener el menú actual (para el turno del usuario)
+<<<<<<< HEAD
   /// Obtener el menú actual (para el turno del usuario autenticado)
   Future<Map<String, dynamic>?> obtenerMenuActual() async {
+=======
+  Future<Map<String, dynamic>?> obtenerMenuActual(Map<String, dynamic> menuData) async {
+>>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
     try {
       // 1. Usamos la ruta exacta con barra diagonal final tal cual está en tu FastAPI
       // 2. Eliminamos el parámetro 'turno', ya que tu backend lo obtiene solo del token
       final response = await _dio.get(
+<<<<<<< HEAD
         '$baseUrl/menu/semanal/actual/',
+=======
+        '${ApiService.baseUrl}/menu/semanal/actual', data: menuData,
+>>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
       );
 
       if (response.statusCode == 200) {
