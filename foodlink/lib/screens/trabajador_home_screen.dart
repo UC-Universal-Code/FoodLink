@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:foodlink/screens/reportar_screen.dart';
+import 'package:foodlink/screens/perfil_screen.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
@@ -287,6 +288,9 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ReportarScreen()),
+            );
+          } else if (index == 2){
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()),
             );
           }
         },
