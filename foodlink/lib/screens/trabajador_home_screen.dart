@@ -33,19 +33,18 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
-      final String turnoFinal = widget.turno ?? 'Matutino'; // Puedes cambiar 'Matutino' por el turno que prefieras por defecto
 
       setState(() {
-        turnoUsuario = turnoFinal;
+        isLoading = true;
       });
 
-      // Llama a la API con ese turno
-      final data = await apiService.obtenerMenuActual(turnoFinal); 
+      // Llama a la API sin argumentos, ya que el token detecta el turno solo
+      final data = await apiService.obtenerMenuActual(); 
       
       if (data == null) {
         if (!mounted) return;
         setState(() {
-          errorMessage = 'No hay menú disponible para el turno $turnoFinal.';
+          errorMessage = 'No hay menú disponible para tu turno.';
           isLoading = false;
         });
         return;
