@@ -412,4 +412,20 @@ class ApiService {
       throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
+  /// Obtener todos los menús para el administrador
+  Future<List<dynamic>> obtenerTodosLosMenusAdmin() async {
+    try {
+      final response = await _dio.get('$baseUrl/menu/semanal/todos');
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al obtener los menús: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('Se requiere rol de administrador');
+      }
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
 }
