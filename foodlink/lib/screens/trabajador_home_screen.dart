@@ -33,8 +33,6 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
-      
-      // Si el widget recibió un turno por parámetro, lo usa. Si no, usa uno por defecto o el último guardado.
       final String turnoFinal = widget.turno ?? 'Matutino'; // Puedes cambiar 'Matutino' por el turno que prefieras por defecto
 
       setState(() {
