@@ -371,7 +371,7 @@ class ApiService {
       }
     }
   }
-  
+
   Future<List<dynamic>> obtenerReportes() async {
     try {
       final response = await _dio.get('$baseUrl/reportes/');
@@ -379,6 +379,32 @@ class ApiService {
         return response.data;
       } else {
         throw Exception('Error al obtener reportes: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+  // Actualizar estado del reporte
+  Future<void> actualizarEstadoReporte(int id, String nuevoEstado) async {
+    try {
+      final response = await _dio.put(
+        '$baseUrl/reportes/$id',
+        data: {'estado': nuevoEstado},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Error al actualizar estado');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  // Eliminar reporte
+  Future<void> eliminarReporte(int id) async {
+    try {
+      final response = await _dio.delete('$baseUrl/reportes/$id');
+      if (response.statusCode != 204 && response.statusCode != 200) {
+        throw Exception('Error al eliminar reporte');
       }
     } on DioException catch (e) {
       throw Exception('Error al conectar con el servidor: ${e.message}');

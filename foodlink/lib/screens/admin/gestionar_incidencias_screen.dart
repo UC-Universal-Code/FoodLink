@@ -15,7 +15,80 @@ class _GestionarIncidenciasScreenState extends State<GestionarIncidenciasScreen>
   @override
   void initState() {
     super.initState();
-    _futureReportes = _apiService.obtenerReportes();
+    _cargarReportes();
+  }
+
+  void _cargarReportes() {
+    setState(() {
+      _futureReportes = _apiService.obtenerReportes();
+    });
+  }
+
+  void _mostrarOpciones(Map<String, dynamic> reporte) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Gestionar: ${reporte['titulo']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              const Text('Cambiar estado:', style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade100),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _apiService.actualizarEstadoReporte(reporte['id'], 'Pendiente');
+                      _cargarReportes();
+                    },
+                    child: const Text('Pendiente'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade100),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _apiService.actualizarEstadoReporte(reporte['id'], 'Cumplido');
+                      _cargarReportes();
+                    },
+                    child: const Text('Cumplido'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade100),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _apiService.actualizarEstadoReporte(reporte['id'], 'Rechazado');
+                      _cargarReportes();
+                    },
+                    child: const Text('Rechazado'),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  icon: const Icon(Icons.delete),
+                  label: const Text('Eliminar Reporte'),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await _apiService.eliminarReporte(reporte['id']);
+                    _cargarReportes();
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -43,6 +116,11 @@ class _GestionarIncidenciasScreenState extends State<GestionarIncidenciasScreen>
             itemCount: reportes.length,
             itemBuilder: (context, index) {
               final reporte = reportes[index];
+              
+              Color chipColor = Colors.orange.shade100;
+              if (reporte['estado'] == 'Cumplido') chipColor = Colors.green.shade100;
+              if (reporte['estado'] == 'Rechazado') chipColor = Colors.red.shade100;
+
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.only(bottom: 12),
@@ -59,8 +137,9 @@ class _GestionarIncidenciasScreenState extends State<GestionarIncidenciasScreen>
                   ),
                   trailing: Chip(
                     label: Text(reporte['estado'] ?? 'Pendiente'),
-                    backgroundColor: Colors.orange.shade100,
+                    backgroundColor: chipColor,
                   ),
+                  onTap: () => _mostrarOpciones(reporte),
                 ),
               );
             },
