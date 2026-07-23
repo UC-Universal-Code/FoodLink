@@ -399,14 +399,14 @@ class ApiService {
       throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
-  
+
   Future<Map<String, dynamic>> obtenerPerfil() async {
     try {
-      final response = await _dio.get('$baseUrl/users/me'); // O la ruta que use tu backend para el usuario actual
+      final response = await _dio.get('$baseUrl/usuarios/me'); // Corregido de /users/me a /usuarios/me
       if (response.statusCode == 200) {
         return response.data;
       } else {
-        throw Exception('Error al obtener el perfil');
+        throw Exception('Error al obtener el perfil: ${response.statusCode}');
       }
     } on DioException catch (e) {
       throw Exception('Error al conectar con el servidor: ${e.message}');
