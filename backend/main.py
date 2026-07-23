@@ -6,6 +6,7 @@ from database.models import Base
 from routers.users import crear_admin_por_defecto, router as usuarios_router
 
 from routers import users, menu
+from routers import reportes
 
 app = FastAPI(
     title="FoodLink Backend",
@@ -47,3 +48,4 @@ app.include_router(usuarios_router)
 """esta linea de codigo nos permite importar el modulo de users
 y exponer sus endpoints en la aplicacion FastAPI"""
 app.include_router(menu.router)
+app.include_router(reportes.router, prefix="/reportes", tags=["Reportes"])

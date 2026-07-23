@@ -91,3 +91,17 @@ class MenuItem(Base):
     
     # Relación con el menú semanal
     menu = relationship("MenuSemanal", back_populates="items")
+
+class ReporteIncidencia(Base):
+    __tablename__ = "reportes_incidencias"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    numero_empleado = Column(String(50), nullable=False)
+    titulo = Column(String(100), nullable=False)
+    descripcion = Column(Text, nullable=False)
+    estado = Column(String(50), nullable=False)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    # Relación opcional con el usuario
+    usuario = relationship("Usuario")
