@@ -348,7 +348,7 @@ class ApiService {
   Future<Map<String, dynamic>> crearReporte(String titulo, String descripcion) async {
     try {
       final response = await _dio.post(
-        '$baseUrl/', 
+        '$baseUrl/reportes/', 
         data: {
           'titulo': titulo,
           'descripcion': descripcion,
