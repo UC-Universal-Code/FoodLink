@@ -1,7 +1,7 @@
 /// Modelo de Platillo para FoodLink
 /// Basado en los casos de uso C4, C5, C6 del documento S-SDLC
 class Platillo {
-  final int id;
+  final int? id;
   final String nombre;
   final String descripcion;
   final String? imagenUrl; 
@@ -13,7 +13,7 @@ class Platillo {
   final bool disponible;
 
   Platillo({
-    required this.id,
+    this.id,
     required this.nombre,
     required this.descripcion,
     this.imagenUrl,
@@ -27,14 +27,14 @@ class Platillo {
 
   factory Platillo.fromJson(Map<String, dynamic> json) {
     return Platillo(
-      id: json['id'] as int,
-      nombre: json['nombre'] as String,
-      descripcion: json['descripcion'] as String,
-      imagenUrl: json['imagenUrl'] as String?,
-      diaSemana: json['diaSemana'] as String? ?? '',
-      tipoComida: json['tipoComida'] as String? ?? '',
+      id: json['id'] as int?,
+      nombre: (json['nombre_plato'] ?? json['nombre']) as String? ?? '',
+      descripcion: json['descripcion'] as String? ?? '',
+      imagenUrl: json['imagen_url'] ?? json['imagenUrl'],
+      diaSemana: (json['dia_semana'] ?? json['diaSemana']) as String? ?? '',
+      tipoComida: (json['tipo_comida'] ?? json['tipoComida']) as String? ?? '',
       ingredientes: json['ingredientes'] as String?,
-      limitePorciones: json['limitePorciones'] as int?,
+      limitePorciones: json['limite_porciones'] ?? json['limitePorciones'],
       precio: (json['precio'] as num?)?.toDouble() ?? 0.0,
       disponible: json['disponible'] as bool? ?? true,
     );
@@ -42,38 +42,20 @@ class Platillo {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'nombre': nombre,
+      if (id != null) 'id': id,
+      'nombre_plato': nombre,
       'descripcion': descripcion,
-      if (imagenUrl != null) 'imagenUrl': imagenUrl,
+      'imagen_url': imagenUrl,
+      'dia_semana': diaSemana.toLowerCase(),
+      'tipo_comida': tipoComida.toLowerCase(),
+      'ingredientes': ingredientes,
+      'limite_porciones': limitePorciones,
+      'precio': precio,
+      'disponible': disponible,
     };
   }
-  factory Platillo.fromMenuJson(Map<String, dynamic> json) {
-    return Platillo(
-      id: json['id'] ?? 0,
-      nombre: json['nombre_plato'] ?? '',
-      descripcion: json['descripcion'] ?? '',
-      imagenUrl: json['imagen_url'],
-      diaSemana: json['dia_semana'] ?? '',
-      tipoComida: json['tipo_comida'] ?? '',
-      ingredientes: json['ingredientes'],
-      limitePorciones: json['limite_porciones'],
-      precio: (json['precio'] as num?)?.toDouble() ?? 0.0,
-      disponible: json['disponible'] ?? true,
-    );
-  }
-  Map<String, dynamic> toMenuJson() {
-  return {
-    'id': id,
-    'nombre_plato': nombre,
-    'descripcion': descripcion,
-    'imagen_url': imagenUrl,
-    'dia_semana': diaSemana,
-    'tipo_comida': tipoComida,
-    'ingredientes': ingredientes,
-    'limite_porciones': limitePorciones,
-    'precio': precio,
-    'disponible': disponible,
-  };
-  }
+
+  factory Platillo.fromMenuJson(Map<String, dynamic> json) => Platillo.fromJson(json);
+  
+  Map<String, dynamic> toMenuJson() => toJson();
 }
