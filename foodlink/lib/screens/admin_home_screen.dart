@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:foodlink/screens/admin/gestionar_incidencias_screen.dart';
+import 'package:foodlink/screens/admin/ver_menus_screen.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -73,9 +74,10 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Consultar menús de todos los turnos',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Visualización de menús (C6)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const VerMenusScreen(),
                   ),
                 );
               },
