@@ -15,7 +15,11 @@ from schemas import (
 # Importar funciones de autenticación desde users.py
 from routers.users import obtener_usuario_actual, obtener_usuario_admin_actual
 
-router = APIRouter(prefix="/menu", tags=["menu"])
+router = APIRouter(
+    prefix="/menu", 
+    tags=["menu"], 
+    redirect_slashes=False
+    )
 
 def obtener_bd():
     """Obtiene la sesión de la base de datos"""
@@ -299,9 +303,7 @@ def eliminar_menu_semanal(
 # ==========================================
 # RUTAS ESTÁTICAS Y ESPECÍFICAS (DEBEN IR PRIMERO)
 # ==========================================
-
-# En backend/routers/menu.py
-@router.get("/semanal/actual", response_model=MenuSemanalLeer)
+@router.get("/semanal/actual/", response_model=MenuSemanalLeer, include_in_schema=False)
 def obtener_menu_actual(
     db: Session = Depends(obtener_bd),
     usuario_actual: Usuario = Depends(obtener_usuario_actual)
