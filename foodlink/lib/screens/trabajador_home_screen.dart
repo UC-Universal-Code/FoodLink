@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
-
 class TrabajadorHome extends StatefulWidget {
-  const TrabajadorHome({super.key});
+final String? turno;
+
+  const TrabajadorHome({super.key, this.turno});
 
   @override
   State<TrabajadorHome> createState() => _TrabajadorHomeState();
@@ -32,30 +33,39 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
-      final data = await apiService.obtenerMenuActual();
+      
+      // Si el widget recibió un turno por parámetro, lo usa. Si no, usa uno por defecto o el último guardado.
+      final String turnoFinal = widget.turno ?? 'Matutino'; // Puedes cambiar 'Matutino' por el turno que prefieras por defecto
+
+      setState(() {
+        turnoUsuario = turnoFinal;
+      });
+
+      // Llama a la API con ese turno
+      final data = await apiService.obtenerMenuActual(turnoFinal); 
       
       if (data == null) {
+        if (!mounted) return;
         setState(() {
-          errorMessage = 'No hay un menú activo para tu turno actualmente.';
+          errorMessage = 'No hay menú disponible para el turno $turnoFinal.';
           isLoading = false;
         });
         return;
       }
 
-      final menu = MenuSemanal.fromJson(data);
-
+      if (!mounted) return;
       setState(() {
-        menuSemanal = menu;
-        turnoUsuario = menu.turno;
+        menuSemanal = MenuSemanal.fromJson(data);
         isLoading = false;
+        errorMessage = null;
       });
 
-      // Aplica el filtro según la fecha seleccionada
       _filtrarPlatillosPorFecha();
 
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        errorMessage = e.toString().replaceAll('Exception: ', '');
+        errorMessage = 'Error al obtener menú: $e';
         isLoading = false;
       });
     }

@@ -221,10 +221,10 @@ class ApiService {
   }
 
   /// Obtener el menú actual (para el turno del usuario)
-  Future<Map<String, dynamic>?> obtenerMenuActual() async {
+  Future<Map<String, dynamic>?> obtenerMenuActual(String turno) async {
     try {
       final response = await _dio.get(
-        '${ApiService.baseUrl}/menu/semanal/actual',
+        '${ApiService.baseUrl}/menu/semanal/actual', queryParameters: {'turno': turno},
       );
 
       if (response.statusCode == 200) {
@@ -249,7 +249,7 @@ class ApiService {
   Future<List<dynamic>> obtenerMisMenus() async {
     try {
       final response = await _dio.get(
-        '${ApiService.baseUrl}/menu/semanal/mis-menus',
+        '${ApiService.baseUrl}/menu/semanal/mis-menus', 
       );
 
       if (response.statusCode == 200) {
