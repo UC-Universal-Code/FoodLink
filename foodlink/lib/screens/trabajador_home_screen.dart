@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:foodlink/screens/reportar_screen.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
@@ -292,10 +293,9 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
         unselectedItemColor: Colors.grey,
         onTap: (index) {
           if (index == 1) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Funcionalidad: Reportar incidencia (C7)'),
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReportarScreen()),
             );
           }
         },
