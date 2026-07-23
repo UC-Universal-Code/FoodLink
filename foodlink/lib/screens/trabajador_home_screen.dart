@@ -4,7 +4,9 @@ import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
 
 class TrabajadorHome extends StatefulWidget {
-  const TrabajadorHome({super.key});
+  final String turno;
+
+  const TrabajadorHome({super.key, required this.turno});
 
   @override
   State<TrabajadorHome> createState() => _TrabajadorHomeState();
@@ -16,7 +18,8 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   bool isLoading = true;
   String? errorMessage;
   String turnoUsuario = '';
-
+  
+  MenuSemanal? menuActual;
   DateTime fechaSeleccionada = DateTime.now();
 
   final List<String> diasSemana = [
@@ -32,9 +35,12 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
-      final data = await apiService.obtenerMenuActual();
+      
+      // 1. Pásale el turno del trabajador (o la variable donde lo tengas guardado)
+      final data = await apiService.obtenerMenuActual({'turno': widget.turno});
       
       if (data == null) {
+        if (!mounted) return;
         setState(() {
           errorMessage = 'No hay un menú activo para tu turno actualmente.';
           isLoading = false;
@@ -42,20 +48,17 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
         return;
       }
 
-      final menu = MenuSemanal.fromJson(data);
-
+      if (!mounted) return;
       setState(() {
-        menuSemanal = menu;
-        turnoUsuario = menu.turno;
+        menuActual = MenuSemanal.fromJson(data);
         isLoading = false;
+        errorMessage = null;
       });
 
-      // Aplica el filtro según la fecha seleccionada
-      _filtrarPlatillosPorFecha();
-
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        errorMessage = e.toString().replaceAll('Exception: ', '');
+        errorMessage = 'Error al cargar el menú: $e';
         isLoading = false;
       });
     }
@@ -186,7 +189,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Turno ${_capitalize(turnoUsuario)} - $fechaTexto',
+                              'Turno ${_capitalize(widget.turno)} - $fechaTexto',
                               style: const TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ),
