@@ -176,3 +176,12 @@ def obtener_usuario(numero_empleado: str, usuario_actual: Usuario = Depends(obte
     if usuario_actual.rol != "admin" and usuario_actual.numero_empleado != numero_empleado:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permiso para ver este usuario")
     return usuario
+
+@router.get("/me", status_code=status.HTTP_200_OK)
+def obtener_perfil_actual(usuario_actual: Usuario = Depends(obtener_usuario_actual)):
+    return {
+        "id": usuario_actual.id,
+        "nombre": usuario_actual.nombre, # Ajusta según los campos que tenga tu modelo de Usuario
+        "numero_empleado": usuario_actual.numero_empleado,
+        "rol": usuario_actual.rol
+    }
