@@ -3,16 +3,11 @@ import 'package:foodlink/screens/reportar_screen.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
+
 class TrabajadorHome extends StatefulWidget {
-<<<<<<< HEAD
-final String? turno;
+  final String? turno;
 
   const TrabajadorHome({super.key, this.turno});
-=======
-  final String turno;
-
-  const TrabajadorHome({super.key, required this.turno});
->>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
 
   @override
   State<TrabajadorHome> createState() => _TrabajadorHomeState();
@@ -23,9 +18,6 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   List<Platillo> platillosHoy = [];
   bool isLoading = true;
   String? errorMessage;
-  String turnoUsuario = '';
-  
-  MenuSemanal? menuActual;
   DateTime fechaSeleccionada = DateTime.now();
 
   final List<String> diasSemana = [
@@ -41,20 +33,14 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
-<<<<<<< HEAD
 
       setState(() {
         isLoading = true;
       });
 
-      // Llama a la API sin argumentos, ya que el token detecta el turno solo
-      final data = await apiService.obtenerMenuActual(); 
-=======
-      
-      // 1. Pásale el turno del trabajador (o la variable donde lo tengas guardado)
-      final data = await apiService.obtenerMenuActual({'turno': widget.turno});
->>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
-      
+      // El backend detecta el turno directamente desde el JWT token enviado
+      final data = await apiService.obtenerMenuActual();
+
       if (data == null) {
         if (!mounted) return;
         setState(() {
@@ -66,34 +52,22 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
 
       if (!mounted) return;
       setState(() {
-<<<<<<< HEAD
         menuSemanal = MenuSemanal.fromJson(data);
-=======
-        menuActual = MenuSemanal.fromJson(data);
->>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
         isLoading = false;
         errorMessage = null;
       });
 
-<<<<<<< HEAD
       _filtrarPlatillosPorFecha();
 
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        errorMessage = 'Error al obtener menú: $e';
-=======
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
         errorMessage = 'Error al cargar el menú: $e';
->>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
         isLoading = false;
       });
     }
   }
 
-  // Filtrado simple por día
   void _filtrarPlatillosPorFecha() {
     if (menuSemanal == null) return;
 
@@ -110,7 +84,6 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
     });
   }
 
-  // Abrir ventana de Calendario
   Future<void> _seleccionarFecha(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -140,7 +113,6 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos fechaSeleccionada para que el texto cambie en la pantalla
     final fechaTexto = '${_obtenerNombreDia(fechaSeleccionada.weekday)} ${fechaSeleccionada.day} de ${_obtenerNombreMes(fechaSeleccionada.month)}';
 
     return Scaffold(
@@ -152,9 +124,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
           IconButton(
             icon: const Icon(Icons.calendar_month),
             tooltip: 'Cambiar fecha',
-            onPressed: () {
-              _seleccionarFecha(context);
-            },
+            onPressed: () => _seleccionarFecha(context),
           ),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
@@ -218,14 +188,12 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Turno ${_capitalize(widget.turno)} - $fechaTexto',
+                              'Turno ${_capitalize(widget.turno ?? '')} - $fechaTexto',
                               style: const TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ),
                           InkWell(
-                            onTap: () {
-                              _seleccionarFecha(context);
-                            },
+                            onTap: () => _seleccionarFecha(context),
                             borderRadius: BorderRadius.circular(4),
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -280,10 +248,9 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Funcionalidad: Reportar incidencia (C7)'),
-                              ),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const ReportarScreen()),
                             );
                           },
                           style: ElevatedButton.styleFrom(

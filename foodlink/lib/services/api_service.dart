@@ -33,7 +33,7 @@ class ApiService {
     );
   }
 
-  /// Iniciar sesion con numero de empleado y contrasena
+  /// Iniciar sesión con número de empleado y contraseña
   Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
     try {
       final response = await _dio.post(
@@ -61,13 +61,13 @@ class ApiService {
           'token_type': tokenType,
         };
       } else {
-        throw Exception('Error al iniciar sesion: ${response.statusCode}');
+        throw Exception('Error al iniciar sesión: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
-        throw Exception('Numero de empleado o contrasena incorrectos');
+        throw Exception('Número de empleado o contraseña incorrectos');
       } else if (e.type == DioExceptionType.connectionTimeout) {
-        throw Exception('Error de conexion. Verifica que el backend este corriendo.');
+        throw Exception('Error de conexión. Verifica que el backend esté corriendo.');
       } else {
         throw Exception('Error al conectar con el servidor: ${e.message}');
       }
@@ -108,7 +108,7 @@ class ApiService {
       if (e.response?.statusCode == 403) {
         throw Exception('Se requiere rol de administrador');
       } else if (e.response?.statusCode == 401) {
-        throw Exception('No autenticado. Inicia sesion nuevamente.');
+        throw Exception('No autenticado. Inicia sesión nuevamente.');
       } else {
         throw Exception('Error al obtener usuarios: ${e.message}');
       }
@@ -148,7 +148,7 @@ class ApiService {
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
-        throw Exception('El numero de empleado ya existe');
+        throw Exception('El número de empleado ya existe');
       } else if (e.response?.statusCode == 403) {
         throw Exception('Se requiere rol de administrador');
       } else {
@@ -187,18 +187,19 @@ class ApiService {
     }
   }
 
-  /// Cerrar sesion - eliminar token
+  /// Cerrar sesión - eliminar token
   Future<void> logout() async {
     await _storage.delete(key: 'access_token');
-    print('Sesion cerrada');
+    print('Sesión cerrada');
   }
-   // ========== MENÚ SEMANAL ==========
+
+  // ========== MENÚ SEMANAL ==========
 
   /// Crear un menú semanal (solo cocinero/admin)
   Future<Map<String, dynamic>> crearMenuSemanal(Map<String, dynamic> menuData) async {
     try {
       final response = await _dio.post(
-        '${ApiService.baseUrl}/menu/semanal',
+        '$baseUrl/menu/semanal',
         data: menuData,
       );
 
@@ -220,23 +221,10 @@ class ApiService {
     }
   }
 
-  /// Obtener el menú actual (para el turno del usuario)
-<<<<<<< HEAD
   /// Obtener el menú actual (para el turno del usuario autenticado)
   Future<Map<String, dynamic>?> obtenerMenuActual() async {
-=======
-  Future<Map<String, dynamic>?> obtenerMenuActual(Map<String, dynamic> menuData) async {
->>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
     try {
-      // 1. Usamos la ruta exacta con barra diagonal final tal cual está en tu FastAPI
-      // 2. Eliminamos el parámetro 'turno', ya que tu backend lo obtiene solo del token
-      final response = await _dio.get(
-<<<<<<< HEAD
-        '$baseUrl/menu/semanal/actual/',
-=======
-        '${ApiService.baseUrl}/menu/semanal/actual', data: menuData,
->>>>>>> 213e755bbb545a1000ca488a8733f677fe4579ff
-      );
+      final response = await _dio.get('$baseUrl/menu/semanal/actual/');
 
       if (response.statusCode == 200) {
         return response.data;
@@ -259,9 +247,7 @@ class ApiService {
   /// Obtener todos los menús creados por el cocinero actual
   Future<List<dynamic>> obtenerMisMenus() async {
     try {
-      final response = await _dio.get(
-        '${ApiService.baseUrl}/menu/semanal/mis-menus', 
-      );
+      final response = await _dio.get('$baseUrl/menu/semanal/mis-menus');
 
       if (response.statusCode == 200) {
         return response.data;
@@ -282,9 +268,7 @@ class ApiService {
   /// Obtener un menú por ID
   Future<Map<String, dynamic>> obtenerMenuPorId(int id) async {
     try {
-      final response = await _dio.get(
-        '${ApiService.baseUrl}/menu/semanal/$id',
-      );
+      final response = await _dio.get('$baseUrl/menu/semanal/$id');
 
       if (response.statusCode == 200) {
         return response.data;
@@ -308,7 +292,7 @@ class ApiService {
   Future<Map<String, dynamic>> actualizarMenu(int id, Map<String, dynamic> menuData) async {
     try {
       final response = await _dio.put(
-        '${ApiService.baseUrl}/menu/semanal/$id',
+        '$baseUrl/menu/semanal/$id',
         data: menuData,
       );
 
@@ -333,9 +317,7 @@ class ApiService {
   /// Eliminar un menú semanal (solo cocinero que lo creó o admin)
   Future<void> eliminarMenu(int id) async {
     try {
-      final response = await _dio.delete(
-        '${ApiService.baseUrl}/menu/semanal/$id',
-      );
+      final response = await _dio.delete('$baseUrl/menu/semanal/$id');
 
       if (response.statusCode != 204) {
         throw Exception('Error al eliminar menú: ${response.statusCode}');
@@ -350,9 +332,9 @@ class ApiService {
       }
     }
   }
-  // ==========================================
-  // PEGA EL MÉTODO DE REPORTES AQUÍ ABAJO:
-  // ==========================================
+
+  // ========== REPORTES ==========
+
   Future<Map<String, dynamic>> crearReporte(String titulo, String descripcion) async {
     try {
       final response = await _dio.post(
@@ -392,7 +374,7 @@ class ApiService {
       throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
-  // Actualizar estado del reporte
+
   Future<void> actualizarEstadoReporte(int id, String nuevoEstado) async {
     try {
       final response = await _dio.put(
@@ -407,7 +389,6 @@ class ApiService {
     }
   }
 
-  // Eliminar reporte
   Future<void> eliminarReporte(int id) async {
     try {
       final response = await _dio.delete('$baseUrl/reportes/$id');
