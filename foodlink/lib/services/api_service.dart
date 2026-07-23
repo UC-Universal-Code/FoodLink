@@ -342,4 +342,33 @@ class ApiService {
       }
     }
   }
+  // ==========================================
+  // PEGA EL MÉTODO DE REPORTES AQUÍ ABAJO:
+  // ==========================================
+  Future<Map<String, dynamic>> crearReporte(String titulo, String descripcion) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/', 
+        data: {
+          'titulo': titulo,
+          'descripcion': descripcion,
+          'estado': 'Pendiente',
+        },
+      );
+
+      if (response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw Exception('Error al crear reporte: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('No autenticado. Inicia sesión nuevamente.');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permisos para realizar esta acción.');
+      } else {
+        throw Exception('Error al conectar con el servidor: ${e.message}');
+      }
+    }
+  }
 }
