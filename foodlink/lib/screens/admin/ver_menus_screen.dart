@@ -15,7 +15,7 @@ class _VerMenusScreenState extends State<VerMenusScreen> {
   @override
   void initState() {
     super.initState();
-    _menusFuture = _apiService.obtenerMisMenus(); // O el método correspondiente en tu ApiService para listar menús
+    _menusFuture = _apiService.obtenerTodosLosMenusAdmin();
   }
 
   @override
@@ -59,7 +59,26 @@ class _VerMenusScreenState extends State<VerMenusScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text('Turno / Detalle: ${menu['turno_id'] ?? 'General'}'),
-                  // Puedes expandir los detalles del menú según lo que retorne tu backend (`menu.py`)
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Detalles del Menú #${menu['id'] ?? 'N/A'}'),
+                        content: SingleChildScrollView(
+                          child: Text(
+                            menu.toString(),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cerrar'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               );
             },
