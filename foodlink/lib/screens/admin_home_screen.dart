@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:foodlink/screens/admin/gestionar_incidencias_screen.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -56,9 +57,11 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Revisar y dar seguimiento a reportes',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Gestión de incidencias (C8)'),
+                // CORREGIDO: Se cerraron correctamente los paréntesis
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GestionarIncidenciasScreen(),
                   ),
                 );
               },

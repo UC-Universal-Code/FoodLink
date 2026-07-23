@@ -371,4 +371,17 @@ class ApiService {
       }
     }
   }
+  
+  Future<List<dynamic>> obtenerReportes() async {
+    try {
+      final response = await _dio.get('$baseUrl/reportes/');
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al obtener reportes: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
 }
