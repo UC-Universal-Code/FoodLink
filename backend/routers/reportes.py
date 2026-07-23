@@ -40,3 +40,13 @@ def crear_reporte(
     db.commit()
     db.refresh(nuevo_reporte)
     return {"mensaje": "Reporte creado con éxito", "id": nuevo_reporte.id}
+
+@router.get("/", status_code=status.HTTP_200_OK)
+def obtener_reportes(
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual)
+):
+    # Opcional: Puedes validar si el usuario es admin o cocinero si lo deseas, 
+    # o devolver todos los reportes de la base de datos:
+    reportes = db.query(ReporteIncidencia).all()
+    return reportes
