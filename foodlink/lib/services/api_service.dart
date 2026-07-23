@@ -92,7 +92,7 @@ class ApiService {
   /// Obtener la lista de todos los usuarios (solo admin)
   Future<List<User>> getAllUsers() async {
     try {
-      final response = await _dio.get('$baseUrl/usuarios/');
+      final response = await _dio.get('$baseUrl/usuarios');
 
       print('Respuesta de /usuarios/: ${response.statusCode}');
       print('Datos recibidos: ${response.data}');
