@@ -17,6 +17,8 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   String? errorMessage;
   String turnoUsuario = '';
 
+  DateTime fechaSeleccionada = DateTime.now();
+
   final List<String> diasSemana = [
     'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'
   ];
@@ -30,7 +32,6 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   Future<void> _cargarMenuActual() async {
     try {
       final apiService = ApiService();
-      // Usamos obtenerMenuActual() que ya existe en tu ApiService con Dio
       final data = await apiService.obtenerMenuActual();
       
       if (data == null) {
@@ -42,23 +43,16 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
       }
 
       final menu = MenuSemanal.fromJson(data);
-      
-      // Día de la semana actual (1 = Lunes, 7 = Domingo)
-      final hoyIndex = DateTime.now().weekday - 1;
-      final diaHoyTexto = diasSemana[hoyIndex];
-
-      // Filtrar ítems del día que estén disponibles
-      final itemsHoy = menu.items.where((item) {
-        final diaItem = item.diaSemana.toLowerCase();
-        return (diaItem == diaHoyTexto || diaItem.contains(diaHoyTexto)) && item.disponible;
-      }).toList();
 
       setState(() {
         menuSemanal = menu;
-        platillosHoy = itemsHoy;
         turnoUsuario = menu.turno;
         isLoading = false;
       });
+
+      // Aplica el filtro según la fecha seleccionada
+      _filtrarPlatillosPorFecha();
+
     } catch (e) {
       setState(() {
         errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -67,10 +61,55 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
     }
   }
 
+  // Filtrado simple por día
+  void _filtrarPlatillosPorFecha() {
+    if (menuSemanal == null) return;
+
+    final diaIndex = fechaSeleccionada.weekday - 1; // 0 = Lunes, 6 = Domingo
+    final diaBuscado = diasSemana[diaIndex];
+
+    final itemsFiltrados = menuSemanal!.items.where((item) {
+      final diaItem = item.diaSemana.toLowerCase();
+      return (diaItem == diaBuscado || diaItem.contains(diaBuscado)) && item.disponible;
+    }).toList();
+
+    setState(() {
+      platillosHoy = itemsFiltrados;
+    });
+  }
+
+  // Abrir ventana de Calendario
+  Future<void> _seleccionarFecha(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: fechaSeleccionada,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      helpText: 'SELECCIONA UN DÍA PARA VER EL MENÚ',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF20303D),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != fechaSeleccionada) {
+      setState(() {
+        fechaSeleccionada = picked;
+      });
+      _filtrarPlatillosPorFecha();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hoy = DateTime.now();
-    final fechaTexto = '${_obtenerNombreDia(hoy.weekday)} ${hoy.day} de ${_obtenerNombreMes(hoy.month)}';
+    // Usamos fechaSeleccionada para que el texto cambie en la pantalla
+    final fechaTexto = '${_obtenerNombreDia(fechaSeleccionada.weekday)} ${fechaSeleccionada.day} de ${_obtenerNombreMes(fechaSeleccionada.month)}';
 
     return Scaffold(
       appBar: AppBar(
@@ -78,6 +117,13 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
         backgroundColor: const Color(0xFF20303D),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Cambiar fecha',
+            onPressed: () {
+              _seleccionarFecha(context);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             onPressed: () async {
@@ -135,16 +181,46 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Turno ${_capitalize(turnoUsuario)} - $fechaTexto',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Turno ${_capitalize(turnoUsuario)} - $fechaTexto',
+                              style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              _seleccionarFecha(context);
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_calendar, size: 18, color: Color(0xFF20303D)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Cambiar',
+                                    style: TextStyle(
+                                      color: Color(0xFF20303D),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Expanded(
                         child: platillosHoy.isEmpty
                             ? const Center(
                                 child: Text(
-                                  'No hay platillos disponibles para hoy.',
+                                  'No hay platillos disponibles para la fecha seleccionada.',
                                   style: TextStyle(color: Colors.grey, fontSize: 16),
                                 ),
                               )
