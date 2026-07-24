@@ -1,5 +1,3 @@
-// lib/screens/auth/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -37,7 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Redirigir según el rol
       final user = authProvider.currentUser;
       if (user != null) {
         switch (user.rol) {
@@ -51,15 +48,16 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushReplacementNamed(context, '/trabajador');
             break;
           default:
-            Navigator.pushReplacementNamed(context, '/home');
+            Navigator.pushReplacementNamed(context, '/login');
         }
       }
     } else {
-      // Mostrar mensaje de error
+      // Mostrar mensaje limpio del provider
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Error al iniciar sesión'),
+          content: Text(authProvider.errorMessage ?? 'Error al iniciar sesion'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -79,7 +77,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 Icon(
                   Icons.restaurant,
                   size: 80,
@@ -96,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Gestión de Cafetería',
+                  'Gestion de Cafeteria',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
@@ -104,11 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Campo: ID de empleado
                 TextFormField(
                   controller: _empleadoIdController,
                   decoration: InputDecoration(
-                    labelText: 'Número de Empleado',
+                    labelText: 'Numero de Empleado',
                     hintText: 'Ej: admin',
                     prefixIcon: const Icon(Icons.badge),
                     border: OutlineInputBorder(
@@ -117,19 +113,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'El número de empleado es obligatorio';
+                      return 'El numero de empleado es obligatorio';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // Campo: Contraseña
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    labelText: 'Contraseña',
+                    labelText: 'Contrasena',
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -147,17 +142,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'La contraseña es obligatoria';
+                      return 'La contrasena es obligatoria';
                     }
                     if (value.length < 6) {
-                      return 'La contraseña debe tener al menos 6 caracteres';
+                      return 'La contrasena debe tener al menos 6 caracteres';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 24),
 
-                // Botón de inicio de sesión
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -180,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            'Iniciar Sesión',
+                            'Iniciar Sesion',
                             style: TextStyle(fontSize: 18),
                           ),
                   ),
