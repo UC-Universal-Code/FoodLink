@@ -8,8 +8,17 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import connection
-from database.models import Usuario
-from schemas import PeticionLogin, TokenAcceso, DatosToken, UsuarioCrear, UsuarioLeer
+from database.models import Usuario, Turno, Departamento  
+from schemas import (
+    PeticionLogin,
+    TokenAcceso,
+    DatosToken,
+    UsuarioCrear,
+    UsuarioLeer,
+    TurnoLeer,          
+    DepartamentoLeer,
+    UsuarioActualizar   
+)
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
@@ -62,8 +71,8 @@ def crear_admin_por_defecto(db: Session) -> Usuario:
         return administrador
     administrador = Usuario(
         numero_empleado=ADMIN_POR_DEFECTO_EMPLEADO,
-        nombre="Adminis",
-        apellido="trador",
+        nombre="Administrador",
+        apellido="PorDefecto",
         hash_contrasena=obtener_hash_contrasena(ADMIN_POR_DEFECTO_CONTRASENA),
         rol="admin",
         estado="active",
@@ -122,7 +131,7 @@ def obtener_usuario_admin_actual(usuario_actual: Usuario = Depends(obtener_usuar
         )
     return usuario_actual
 
-# endpoints de usuario
+# ---------- ENDPOINTS DE USUARIO ----------
 
 @router.post("/login", response_model=TokenAcceso)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(obtener_bd)):
@@ -168,6 +177,37 @@ def obtener_mis_datos(usuario_actual: Usuario = Depends(obtener_usuario_actual))
     return usuario_actual
 
 
+@router.get("/", response_model=list[UsuarioLeer])
+def obtener_usuarios(
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    """
+    Obtiene la lista de todos los usuarios registrados en el sistema.
+    Solo accesible para usuarios con rol de administrador.
+    """
+    usuarios = db.query(Usuario).all()
+    return usuarios
+
+
+@router.get("/turnos", response_model=list[TurnoLeer])
+def obtener_turnos(db: Session = Depends(obtener_bd)):
+    """
+    Obtiene la lista de todos los turnos disponibles.
+    """
+    turnos = db.query(Turno).all()
+    return turnos
+
+
+@router.get("/departamentos", response_model=list[DepartamentoLeer])
+def obtener_departamentos(db: Session = Depends(obtener_bd)):
+    """
+    Obtiene la lista de todos los departamentos disponibles.
+    """
+    departamentos = db.query(Departamento).all()
+    return departamentos
+
+
 @router.get("/{numero_empleado}", response_model=UsuarioLeer)
 def obtener_usuario(numero_empleado: str, usuario_actual: Usuario = Depends(obtener_usuario_actual), db: Session = Depends(obtener_bd)):
     usuario = obtener_usuario_por_numero_empleado(db, numero_empleado)
@@ -176,3 +216,85 @@ def obtener_usuario(numero_empleado: str, usuario_actual: Usuario = Depends(obte
     if usuario_actual.rol != "admin" and usuario_actual.numero_empleado != numero_empleado:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permiso para ver este usuario")
     return usuario
+
+
+# ========== ACTUALIZAR USUARIO ==========
+@router.put("/{numero_empleado}", response_model=UsuarioLeer)
+def actualizar_usuario(
+    numero_empleado: str,
+    usuario_in: UsuarioActualizar,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    """
+    Actualiza los datos de un usuario existente.
+    Solo accesible para administradores.
+    """
+    usuario = obtener_usuario_por_numero_empleado(db, numero_empleado)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # No permitir cambiar el rol del administrador principal
+    if usuario.rol == "admin" and usuario_in.rol and usuario_in.rol != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede cambiar el rol del administrador principal"
+        )
+    
+    # Actualizar solo los campos que vienen en la petición
+    if usuario_in.nombre is not None:
+        usuario.nombre = usuario_in.nombre
+    if usuario_in.apellido is not None:
+        usuario.apellido = usuario_in.apellido
+    if usuario_in.departamento_id is not None:
+        usuario.departamento_id = usuario_in.departamento_id
+    if usuario_in.turno_id is not None:
+        usuario.turno_id = usuario_in.turno_id
+    if usuario_in.rol is not None:
+        usuario.rol = usuario_in.rol
+    if usuario_in.estado is not None:
+        usuario.estado = usuario_in.estado
+    
+    # Si se envía una nueva contraseña, actualizarla
+    if usuario_in.contrasena is not None and usuario_in.contrasena != "":
+        usuario.hash_contrasena = obtener_hash_contrasena(usuario_in.contrasena)
+    
+    usuario.actualizado_en = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
+# ========== ELIMINAR USUARIO ==========
+@router.delete("/{numero_empleado}")
+def eliminar_usuario(
+    numero_empleado: str,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    """
+    Elimina físicamente a un usuario de la base de datos.
+    Solo accesible para administradores.
+    No se puede eliminar al administrador principal.
+    """
+    usuario = obtener_usuario_por_numero_empleado(db, numero_empleado)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    if usuario.rol == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede eliminar al administrador principal"
+        )
+    
+    db.delete(usuario)
+    db.commit()
+    
+    return {"message": f"Usuario {usuario.nombre} {usuario.apellido} eliminado correctamente"}

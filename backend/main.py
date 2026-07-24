@@ -1,4 +1,7 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware #se agrego dependencia del cors
+
+
 from fastapi.middleware.cors import CORSMiddleware
 from database import connection
 from database.connection import engine, verificar_conexion
@@ -12,6 +15,16 @@ app = FastAPI(
     title="FoodLink Backend",
     description="API backend con FastAPI y documentacion Swagger UI.",
     version="0.1.0",
+    
+)
+
+# Configuración de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"], 
 )
 app.add_middleware(
     CORSMiddleware,

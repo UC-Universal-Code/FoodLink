@@ -34,6 +34,28 @@ class UsuarioLeer(UsuarioBase):
 
     class Config:
         from_attributes = True
+        
+        
+        
+class TurnoLeer(BaseModel):
+    id: int
+    nombre: str
+    hora_inicio: str
+    hora_fin: str
+    dias: str
+
+    class Config:
+        from_attributes = True
+
+
+class DepartamentoLeer(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 
 
 # ========== SCHEMAS PARA MENÚ SEMANAL
@@ -96,6 +118,15 @@ class MenuSemanalLeer(MenuSemanalBase):
     
     class Config:
         from_attributes = True
+
+class UsuarioActualizar(BaseModel):
+    nombre: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    apellido: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    contrasena: Optional[constr(strip_whitespace=True, min_length=6)] = None
+    rol: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    estado: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    departamento_id: Optional[int] = None
+    turno_id: Optional[int] = None
 
 # Reconstruir modelos para resolver referencias circulares
 MenuSemanalCrear.model_rebuild()
