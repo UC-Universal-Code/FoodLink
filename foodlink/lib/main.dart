@@ -8,6 +8,7 @@ import 'screens/cocinero_home_screen.dart';
 import 'screens/trabajador_home_screen.dart';
 import 'screens/admin/user_list_screen.dart';
 import 'screens/admin/create_user_screen.dart';
+import 'screens/admin/edit_user_screen.dart';
 
 void main() {
   runApp(const MyApp());

@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware #se agrego dependencia del cors
 
+
+from fastapi.middleware.cors import CORSMiddleware
 from database import connection
 from database.connection import engine, verificar_conexion
 from database.models import Base
 from routers.users import crear_admin_por_defecto, router as usuarios_router
+
+from routers import users, menu
+from routers import reportes
 
 app = FastAPI(
     title="FoodLink Backend",
@@ -20,6 +25,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  
     allow_headers=["*"], 
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite peticiones desde Flutter Web
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],  # Permite enviar encabezados como Authorization (Bearer Token)
 )
 
 @app.on_event("startup")
@@ -48,3 +60,5 @@ se expone en la ruta / y que devuelve un mensaje de bienvenida"""
 app.include_router(usuarios_router)
 """esta linea de codigo nos permite importar el modulo de users
 y exponer sus endpoints en la aplicacion FastAPI"""
+app.include_router(menu.router)
+app.include_router(reportes.router, prefix="/reportes", tags=["Reportes"])

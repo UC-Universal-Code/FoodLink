@@ -132,8 +132,95 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+  /// Obtener el nombre de un turno por su ID
+  String getTurnoNombre(int? turnoId) {
+    if (turnoId == null) return 'Sin asignar';
+    try {
+      return _turnos.firstWhere((t) => t.id == turnoId).nombre;
+    } catch (e) {
+      return 'Sin asignar';
+    }
+  }
+
+  /// Obtener el nombre de un departamento por su ID
+  String getDepartamentoNombre(int? departamentoId) {
+    if (departamentoId == null) return 'Sin asignar';
+    try {
+      return _departamentos.firstWhere((d) => d.id == departamentoId).nombre;
+    } catch (e) {
+      return 'Sin asignar';
+    }
+  }
+
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+    /// Actualizar un usuario existente (solo admin)
+  Future<bool> updateUser({
+    required String numeroEmpleado,
+    required String nombre,
+    required String apellido,
+    String? contrasena,
+    String? rol,
+    String? estado,
+    int? departamentoId,
+    int? turnoId,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final updatedUser = await _apiService.updateUser(
+        numeroEmpleado: numeroEmpleado,
+        nombre: nombre,
+        apellido: apellido,
+        contrasena: contrasena,
+        rol: rol,
+        estado: estado,
+        departamentoId: departamentoId,
+        turnoId: turnoId,
+      );
+
+      // Actualizar la lista local
+      final index = _users.indexWhere((u) => u.numeroEmpleado == numeroEmpleado);
+      if (index != -1) {
+        _users[index] = updatedUser;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Eliminar un usuario (solo admin)
+  Future<bool> deleteUser(String numeroEmpleado) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _apiService.deleteUser(numeroEmpleado);
+
+      // Eliminar de la lista local
+      _users.removeWhere((u) => u.numeroEmpleado == numeroEmpleado);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 }

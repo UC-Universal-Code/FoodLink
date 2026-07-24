@@ -92,7 +92,8 @@ class ApiService {
   /// Obtener la lista de todos los usuarios (solo admin)
   Future<List<User>> getAllUsers() async {
     try {
-      final response = await _dio.get('$baseUrl/usuarios');
+      // 👇 CORREGIDO: agregar barra al final
+      final response = await _dio.get('$baseUrl/usuarios/');
 
       print('Respuesta de /usuarios/: ${response.statusCode}');
       print('Datos recibidos: ${response.data}');
@@ -402,7 +403,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> obtenerPerfil() async {
     try {
-      final response = await _dio.get('$baseUrl/usuarios/me'); // Corregido de /users/me a /usuarios/me
+      final response = await _dio.get('$baseUrl/usuarios/me');
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -412,6 +413,7 @@ class ApiService {
       throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
+
   /// Obtener todos los menús para el administrador
   Future<List<dynamic>> obtenerTodosLosMenusAdmin() async {
     try {
@@ -428,4 +430,70 @@ class ApiService {
       throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
+
+    /// Actualizar un usuario (solo admin)
+  Future<User> updateUser({
+    required String numeroEmpleado,
+    required String nombre,
+    required String apellido,
+    String? contrasena,
+    String? rol,
+    String? estado,
+    int? departamentoId,
+    int? turnoId,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'nombre': nombre,
+        'apellido': apellido,
+      };
+      
+      if (contrasena != null && contrasena.isNotEmpty) {
+        data['contrasena'] = contrasena;
+      }
+      if (rol != null) data['rol'] = rol;
+      if (estado != null) data['estado'] = estado;
+      if (departamentoId != null) data['departamento_id'] = departamentoId;
+      if (turnoId != null) data['turno_id'] = turnoId;
+
+      final response = await _dio.put(
+        '$baseUrl/usuarios/$numeroEmpleado',
+        data: data,
+      );
+
+      if (response.statusCode == 200) {
+        return User.fromJson(response.data);
+      } else {
+        throw Exception('Error al actualizar usuario: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permiso para editar este usuario');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Usuario no encontrado');
+      } else {
+        throw Exception('Error al actualizar usuario: ${e.message}');
+      }
+    }
+  }
+
+  /// Eliminar un usuario (solo admin)
+  Future<void> deleteUser(String numeroEmpleado) async {
+    try {
+      final response = await _dio.delete('$baseUrl/usuarios/$numeroEmpleado');
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al eliminar usuario: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No se puede eliminar al administrador principal');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Usuario no encontrado');
+      } else {
+        throw Exception('Error al eliminar usuario: ${e.message}');
+      }
+    }
+  }
 }
+

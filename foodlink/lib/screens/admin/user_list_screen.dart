@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user.dart';
 import 'create_user_screen.dart';
+import 'edit_user_screen.dart';  // 👈 AGREGAR IMPORT
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -16,7 +17,9 @@ class _UserListScreenState extends State<UserListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProvider>(context, listen: false).fetchUsers();
+      final provider = Provider.of<UserProvider>(context, listen: false);
+      provider.loadCatalogos();  // Cargar turnos y departamentos
+      provider.fetchUsers();      // Cargar usuarios
     });
   }
 
@@ -151,6 +154,7 @@ class _UserListScreenState extends State<UserListScreen> {
   }
 
   Widget _buildUserCard(User user, BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final Color primaryColor = const Color(0xFF20303D);
 
     Color rolColor;
@@ -168,11 +172,6 @@ class _UserListScreenState extends State<UserListScreen> {
         rolLabel = 'Cocinero';
         rolIcon = Icons.restaurant;
         break;
-      case 'trabajador':
-        rolColor = const Color(0xFF4FC3F7);
-        rolLabel = 'Trabajador';
-        rolIcon = Icons.engineering;
-        break;
       case 'user':
         rolColor = const Color(0xFF81C784);
         rolLabel = 'Usuario';
@@ -188,6 +187,9 @@ class _UserListScreenState extends State<UserListScreen> {
         ? const Color(0xFF4CAF50)
         : const Color(0xFFE57373);
     String estadoLabel = user.estado == 'active' ? 'Activo' : 'Inactivo';
+
+    // Obtener el nombre del turno
+    String turnoNombre = userProvider.getTurnoNombre(user.turnoId);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -235,6 +237,14 @@ class _UserListScreenState extends State<UserListScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'N° Empleado: ${user.numeroEmpleado}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Turno: $turnoNombre',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -311,22 +321,55 @@ class _UserListScreenState extends State<UserListScreen> {
                 ),
               ),
 
+              // 👇 ACCIONES PARA USUARIOS NO ADMIN
               if (user.rol != 'admin')
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.person_remove,
-                      color: Color(0xFFE53935),
-                      size: 24,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Botón Editar
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.edit,
+                          color: Colors.blue,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditUserScreen(user: user),
+                            ),
+                          ).then((_) {
+                            Provider.of<UserProvider>(context, listen: false).fetchUsers();
+                          });
+                        },
+                        tooltip: 'Editar usuario',
+                        splashRadius: 24,
+                      ),
                     ),
-                    onPressed: () => _confirmDeactivate(context, user),
-                    tooltip: 'Desactivar usuario',
-                    splashRadius: 24,
-                  ),
+                    // Botón Eliminar
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.delete_forever,
+                          color: Color(0xFFE53935),
+                          size: 22,
+                        ),
+                        onPressed: () => _confirmDelete(context, user),
+                        tooltip: 'Eliminar usuario',
+                        splashRadius: 24,
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -404,7 +447,96 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
+  // 👇 NUEVO MÉTODO: Confirmar eliminación
+  void _confirmDelete(BuildContext context, User user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.delete_forever,
+              color: Colors.red[700],
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Eliminar usuario',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF20303D),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres ELIMINAR PERMANENTEMENTE a ${user.nombre} ${user.apellido}?\n\nEsta acción no se puede deshacer.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey[700],
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+            ),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await Provider.of<UserProvider>(context, listen: false)
+                  .deleteUser(user.numeroEmpleado);
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${user.nombre} ${user.apellido} eliminado'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+                Provider.of<UserProvider>(context, listen: false).fetchUsers();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      Provider.of<UserProvider>(context, listen: false).errorMessage ??
+                      'Error al eliminar usuario'
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53935),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showUserDetails(BuildContext context, User user) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    // Obtener nombres
+    String turnoNombre = userProvider.getTurnoNombre(user.turnoId);
+    String rolLabel = _getRolLabel(user.rol);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -444,13 +576,21 @@ class _UserListScreenState extends State<UserListScreen> {
           children: [
             _buildDetailRow(Icons.badge, 'N° Empleado', user.numeroEmpleado),
             const SizedBox(height: 8),
-            _buildDetailRow(Icons.admin_panel_settings, 'Rol', user.rol),
+            _buildDetailRow(Icons.admin_panel_settings, 'Rol', rolLabel),
             const SizedBox(height: 8),
             _buildDetailRow(
               user.estado == 'active' ? Icons.check_circle : Icons.cancel,
               'Estado',
               user.estado == 'active' ? 'Activo' : 'Inactivo',
               color: user.estado == 'active' ? Colors.green : Colors.red,
+            ),
+            const SizedBox(height: 8),
+            // 👇 TURNO AGREGADO
+            _buildDetailRow(
+              Icons.schedule,
+              'Turno',
+              turnoNombre,
+              color: const Color(0xFF20303D),
             ),
             const SizedBox(height: 8),
             _buildDetailRow(Icons.numbers, 'ID', user.id.toString()),
@@ -467,6 +607,19 @@ class _UserListScreenState extends State<UserListScreen> {
         ],
       ),
     );
+  }
+
+  String _getRolLabel(String rol) {
+    switch (rol) {
+      case 'admin':
+        return 'Administrador';
+      case 'cocinero':
+        return 'Cocinero';
+      case 'user':
+        return 'Usuario';
+      default:
+        return rol;
+    }
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value, {Color color = Colors.grey}) {

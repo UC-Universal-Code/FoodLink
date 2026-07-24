@@ -16,7 +16,8 @@ from schemas import (
     UsuarioCrear,
     UsuarioLeer,
     TurnoLeer,          
-    DepartamentoLeer    
+    DepartamentoLeer,
+    UsuarioActualizar   
 )
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
@@ -215,3 +216,85 @@ def obtener_usuario(numero_empleado: str, usuario_actual: Usuario = Depends(obte
     if usuario_actual.rol != "admin" and usuario_actual.numero_empleado != numero_empleado:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permiso para ver este usuario")
     return usuario
+
+
+# ========== ACTUALIZAR USUARIO ==========
+@router.put("/{numero_empleado}", response_model=UsuarioLeer)
+def actualizar_usuario(
+    numero_empleado: str,
+    usuario_in: UsuarioActualizar,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    """
+    Actualiza los datos de un usuario existente.
+    Solo accesible para administradores.
+    """
+    usuario = obtener_usuario_por_numero_empleado(db, numero_empleado)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # No permitir cambiar el rol del administrador principal
+    if usuario.rol == "admin" and usuario_in.rol and usuario_in.rol != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede cambiar el rol del administrador principal"
+        )
+    
+    # Actualizar solo los campos que vienen en la petición
+    if usuario_in.nombre is not None:
+        usuario.nombre = usuario_in.nombre
+    if usuario_in.apellido is not None:
+        usuario.apellido = usuario_in.apellido
+    if usuario_in.departamento_id is not None:
+        usuario.departamento_id = usuario_in.departamento_id
+    if usuario_in.turno_id is not None:
+        usuario.turno_id = usuario_in.turno_id
+    if usuario_in.rol is not None:
+        usuario.rol = usuario_in.rol
+    if usuario_in.estado is not None:
+        usuario.estado = usuario_in.estado
+    
+    # Si se envía una nueva contraseña, actualizarla
+    if usuario_in.contrasena is not None and usuario_in.contrasena != "":
+        usuario.hash_contrasena = obtener_hash_contrasena(usuario_in.contrasena)
+    
+    usuario.actualizado_en = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
+# ========== ELIMINAR USUARIO ==========
+@router.delete("/{numero_empleado}")
+def eliminar_usuario(
+    numero_empleado: str,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    """
+    Elimina físicamente a un usuario de la base de datos.
+    Solo accesible para administradores.
+    No se puede eliminar al administrador principal.
+    """
+    usuario = obtener_usuario_por_numero_empleado(db, numero_empleado)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    if usuario.rol == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede eliminar al administrador principal"
+        )
+    
+    db.delete(usuario)
+    db.commit()
+    
+    return {"message": f"Usuario {usuario.nombre} {usuario.apellido} eliminado correctamente"}
