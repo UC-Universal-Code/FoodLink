@@ -46,12 +46,14 @@ class UserProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _catalogosCargados = false;
   String? _errorMessage;
+  String? _contrasenaGenerada;
 
   List<User> get users => _users;
   List<Turno> get turnos => _turnos;
   List<Departamento> get departamentos => _departamentos;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get contrasenaGenerada => _contrasenaGenerada;
 
   /// Cargar turnos y departamentos desde el backend (solo una vez)
   Future<void> loadCatalogos({bool force = false}) async {
@@ -84,11 +86,8 @@ class UserProvider extends ChangeNotifier {
   String getTurnoNombre(int? turnoId) {
     if (turnoId == null) return 'Sin asignar';
     
-    // Si no hay turnos cargados, intentar cargarlos
     if (_turnos.isEmpty && !_catalogosCargados) {
-      // Cargar catalogos de forma asíncrona
       loadCatalogos();
-      // Mientras se cargan, devolver un valor temporal
       return 'Cargando...';
     }
     
@@ -138,45 +137,56 @@ class UserProvider extends ChangeNotifier {
 
   /// Crear un nuevo usuario en la base de datos (solo admin)
   Future<bool> createUser({
-    required String numeroEmpleado,
-    required String nombre,
-    required String apellido,
-    required String contrasena,
-    String rol = 'user',
-    String estado = 'active',
-    int? departamentoId,
-    int? turnoId,
-  }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  required String numeroEmpleado,
+  required String nombre,
+  required String apellido,
+  required String contrasena,  // Puede ser vacía
+  String rol = 'user',
+  String estado = 'active',
+  int? departamentoId,
+  int? turnoId,
+}) async {
+  _isLoading = true;
+  _errorMessage = null;
+  _contrasenaGenerada = null;
+  notifyListeners();
 
-    try {
-      final newUser = await _apiService.createUser(
-        numeroEmpleado: numeroEmpleado,
-        nombre: nombre,
-        apellido: apellido,
-        contrasena: contrasena,
-        rol: rol,
-        estado: estado,
-        departamentoId: departamentoId,
-        turnoId: turnoId,
-      );
+  try {
+    // Si la contraseña está vacía, enviar null para que el backend la genere
+    final contrasenaFinal = contrasena.isEmpty ? null : contrasena;
 
-      _users.add(newUser);
-      print('Usuario creado: ${newUser.nombre} ${newUser.apellido}');
+    final result = await _apiService.createUser(
+      numeroEmpleado: numeroEmpleado,
+      nombre: nombre,
+      apellido: apellido,
+      contrasena: contrasenaFinal,  // Puede ser null
+      rol: rol,
+      estado: estado,
+      departamentoId: departamentoId,
+      turnoId: turnoId,
+    );
 
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      print('Error en createUser: $_errorMessage');
-      _isLoading = false;
-      notifyListeners();
-      return false;
+    // Extraer la contraseña generada si existe
+    if (result.containsKey('contrasena_generada')) {
+      _contrasenaGenerada = result['contrasena_generada'] as String?;
     }
+
+    // Convertir el mapa a User
+    final newUser = User.fromJson(result);
+    _users.add(newUser);
+    print('Usuario creado: ${newUser.nombre} ${newUser.apellido}');
+
+    _isLoading = false;
+    notifyListeners();
+    return true;
+  } catch (e) {
+    _errorMessage = e.toString();
+    print('Error en createUser: $_errorMessage');
+    _isLoading = false;
+    notifyListeners();
+    return false;
   }
+}
 
   /// Actualizar un usuario existente (solo admin)
   Future<bool> updateUser({

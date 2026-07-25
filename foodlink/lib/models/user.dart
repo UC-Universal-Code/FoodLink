@@ -13,6 +13,7 @@ class User {
   final String estado;
   final DateTime creadoEn;
   final DateTime actualizadoEn;
+  final bool? esTemporal; 
 
   User({
     required this.id,
@@ -25,6 +26,7 @@ class User {
     required this.estado,
     required this.creadoEn,
     required this.actualizadoEn,
+    this.esTemporal,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class User {
       estado: json['estado'] as String,
       creadoEn: DateTime.parse(json['creado_en'] as String),
       actualizadoEn: DateTime.parse(json['actualizado_en'] as String),
+      esTemporal: json['es_temporal'] as bool?,
     );
   }
 
@@ -54,6 +57,7 @@ class User {
       'estado': estado,
       'creado_en': creadoEn.toIso8601String(),
       'actualizado_en': actualizadoEn.toIso8601String(),
+      'es_temporal': esTemporal,
     };
   }
 }

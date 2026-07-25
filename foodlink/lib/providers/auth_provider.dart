@@ -15,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   String _tiempoRestante = '';
   Timer? _timer;
   DateTime? _bloqueoHasta;
+  bool? get esTemporal => _currentUser?.esTemporal;
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;

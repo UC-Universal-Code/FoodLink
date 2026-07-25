@@ -34,48 +34,45 @@ class ApiService {
   }
 
   /// Iniciar sesión con número de empleado y contraseña
-Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
-  try {
-    final response = await _dio.post(
-      '$baseUrl/usuarios/login',
-      data: {
-        'username': numeroEmpleado,
-        'password': contrasena,
-      },
-      options: Options(
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+  Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/usuarios/login',
+        data: {
+          'username': numeroEmpleado,
+          'password': contrasena,
         },
-        
-        validateStatus: (status) => status! < 500,
-      ),
-    );
+        options: Options(
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
 
-    if (response.statusCode == 200) {
-      final accessToken = response.data['access_token'] as String;
-      final tokenType = response.data['token_type'] as String;
+      if (response.statusCode == 200) {
+        final accessToken = response.data['access_token'] as String;
+        final tokenType = response.data['token_type'] as String;
 
-      await _storage.write(key: 'access_token', value: accessToken);
-      print('Token guardado correctamente');
+        await _storage.write(key: 'access_token', value: accessToken);
+        print('Token guardado correctamente');
 
-      return {
-        'access_token': accessToken,
-        'token_type': tokenType,
-      };
-    } else {
-      // Si el status no es 200, lanzar excepción con el mensaje del backend
-      final detail = response.data?['detail'] ?? 'Error al iniciar sesión';
-      throw Exception(detail);
+        return {
+          'access_token': accessToken,
+          'token_type': tokenType,
+        };
+      } else {
+        final detail = response.data?['detail'] ?? 'Error al iniciar sesión';
+        throw Exception(detail);
+      }
+    } on DioException catch (e) {
+      if (e.response?.data != null) {
+        final detail = e.response?.data?['detail'] ?? e.message;
+        throw Exception(detail);
+      }
+      throw Exception('Error al conectar con el servidor: ${e.message}');
     }
-  } on DioException catch (e) {
-    // Si es un error de Dio, intentar extraer el mensaje
-    if (e.response?.data != null) {
-      final detail = e.response?.data?['detail'] ?? e.message;
-      throw Exception(detail);
-    }
-    throw Exception('Error al conectar con el servidor: ${e.message}');
   }
-}
 
   /// Obtener los datos del usuario actual
   Future<User> getCurrentUser() async {
@@ -95,7 +92,6 @@ Future<Map<String, String>> login(String numeroEmpleado, String contrasena) asyn
   /// Obtener la lista de todos los usuarios (solo admin)
   Future<List<User>> getAllUsers() async {
     try {
-      // 👇 CORREGIDO: agregar barra al final
       final response = await _dio.get('$baseUrl/usuarios/');
 
       print('Respuesta de /usuarios/: ${response.statusCode}');
@@ -120,46 +116,53 @@ Future<Map<String, String>> login(String numeroEmpleado, String contrasena) asyn
   }
 
   /// Crear un nuevo usuario (solo admin)
-  Future<User> createUser({
-    required String numeroEmpleado,
-    required String nombre,
-    required String apellido,
-    required String contrasena,
-    String rol = 'user',
-    String estado = 'active',
-    int? departamentoId,
-    int? turnoId,
-  }) async {
-    try {
-      final response = await _dio.post(
-        '$baseUrl/usuarios/',
-        data: {
-          'numero_empleado': numeroEmpleado,
-          'nombre': nombre,
-          'apellido': apellido,
-          'contrasena': contrasena,
-          'rol': rol,
-          'estado': estado,
-          'departamento_id': departamentoId,
-          'turno_id': turnoId,
-        },
-      );
+  /// Devuelve el mapa completo para poder extraer contrasena_generada
+  Future<Map<String, dynamic>> createUser({
+  required String numeroEmpleado,
+  required String nombre,
+  required String apellido,
+  String? contrasena,  // 👈 Ahora es nullable
+  String rol = 'user',
+  String estado = 'active',
+  int? departamentoId,
+  int? turnoId,
+}) async {
+  try {
+    final Map<String, dynamic> data = {
+      'numero_empleado': numeroEmpleado,
+      'nombre': nombre,
+      'apellido': apellido,
+      'rol': rol,
+      'estado': estado,
+      'departamento_id': departamentoId,
+      'turno_id': turnoId,
+    };
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return User.fromJson(response.data);
-      } else {
-        throw Exception('Error al crear usuario: ${response.statusCode}');
-      }
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 400) {
-        throw Exception('El número de empleado ya existe');
-      } else if (e.response?.statusCode == 403) {
-        throw Exception('Se requiere rol de administrador');
-      } else {
-        throw Exception('Error al crear usuario: ${e.message}');
-      }
+    // Solo agregar la contraseña si no es null
+    if (contrasena != null && contrasena.isNotEmpty) {
+      data['contrasena'] = contrasena;
+    }
+
+    final response = await _dio.post(
+      '$baseUrl/usuarios/',
+      data: data,
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return response.data;
+    } else {
+      throw Exception('Error al crear usuario: ${response.statusCode}');
+    }
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 400) {
+      throw Exception('El número de empleado ya existe');
+    } else if (e.response?.statusCode == 403) {
+      throw Exception('Se requiere rol de administrador');
+    } else {
+      throw Exception('Error al crear usuario: ${e.message}');
     }
   }
+}
 
   /// Obtener la lista de todos los turnos
   Future<List<Map<String, dynamic>>> getTurnos() async {
@@ -342,7 +345,7 @@ Future<Map<String, String>> login(String numeroEmpleado, String contrasena) asyn
   Future<Map<String, dynamic>> crearReporte(String titulo, String descripcion) async {
     try {
       final response = await _dio.post(
-        '$baseUrl/reportes/', 
+        '$baseUrl/reportes/',
         data: {
           'titulo': titulo,
           'descripcion': descripcion,
@@ -434,7 +437,7 @@ Future<Map<String, String>> login(String numeroEmpleado, String contrasena) asyn
     }
   }
 
-    /// Actualizar un usuario (solo admin)
+  /// Actualizar un usuario (solo admin)
   Future<User> updateUser({
     required String numeroEmpleado,
     required String nombre,
@@ -498,5 +501,35 @@ Future<Map<String, String>> login(String numeroEmpleado, String contrasena) asyn
       }
     }
   }
-}
 
+  
+
+  /// Cambiar contraseña
+  Future<void> cambiarContrasena({
+    required String contrasenaActual,
+    required String nuevaContrasena,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/usuarios/cambiar-contrasena',
+        data: {
+          'contrasena_actual': contrasenaActual,
+          'nueva_contrasena': nuevaContrasena,
+        },
+      );
+
+      if (response.statusCode != 200) {
+        final detail = response.data?['detail'] ?? 'Error al cambiar contraseña';
+        throw Exception(detail);
+      }
+    } on DioException catch (e) {
+      if (e.response?.data != null) {
+        final detail = e.response?.data?['detail'] ?? e.message;
+        throw Exception(detail);
+      }
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  
+}
