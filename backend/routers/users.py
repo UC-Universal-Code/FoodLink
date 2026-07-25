@@ -100,6 +100,11 @@ def autenticar_usuario(db: Session, numero_empleado: str, contrasena: str) -> Op
         return None
     if not verificar_contrasena(contrasena, usuario.hash_contrasena):
         return None
+    
+    # Verificar que el usuario esté activo
+    if usuario.estado != "active":
+        return None
+    
     return usuario
 
 
@@ -135,13 +140,33 @@ def obtener_usuario_admin_actual(usuario_actual: Usuario = Depends(obtener_usuar
 
 @router.post("/login", response_model=TokenAcceso)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(obtener_bd)):
-    usuario = autenticar_usuario(db, form_data.username, form_data.password)
+    # Primero verificar si el usuario existe
+    usuario = obtener_usuario_por_numero_empleado(db, form_data.username)
+    
     if not usuario:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Numero de empleado o contrasena incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Verificar si la cuenta está inactiva antes de validar la contraseña
+    if usuario.estado != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cuenta desactivada. Contacta al administrador.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Verificar contraseña
+    if not verificar_contrasena(form_data.password, usuario.hash_contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Numero de empleado o contrasena incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Si todo está bien, crear token
     token_acceso = crear_token_acceso(
         data={"sub": usuario.numero_empleado},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
