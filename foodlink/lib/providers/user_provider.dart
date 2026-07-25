@@ -44,6 +44,7 @@ class UserProvider extends ChangeNotifier {
   List<Turno> _turnos = [];
   List<Departamento> _departamentos = [];
   bool _isLoading = false;
+  bool _catalogosCargados = false;
   String? _errorMessage;
 
   List<User> get users => _users;
@@ -52,15 +53,22 @@ class UserProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Cargar turnos y departamentos desde el backend
-  Future<void> loadCatalogos() async {
+  /// Cargar turnos y departamentos desde el backend (solo una vez)
+  Future<void> loadCatalogos({bool force = false}) async {
+    if (_catalogosCargados && !force) {
+      print('Catalogos ya cargados, omitiendo...');
+      return;
+    }
+
     try {
+      print('Cargando catalogos...');
       final turnosData = await _apiService.getTurnos();
       _turnos = turnosData.map((json) => Turno.fromJson(json)).toList();
 
       final deptosData = await _apiService.getDepartamentos();
       _departamentos = deptosData.map((json) => Departamento.fromJson(json)).toList();
 
+      _catalogosCargados = true;
       print('Turnos cargados: ${_turnos.length}');
       print('Departamentos cargados: ${_departamentos.length}');
       notifyListeners();
@@ -68,6 +76,44 @@ class UserProvider extends ChangeNotifier {
       _errorMessage = e.toString();
       print('Error al cargar catalogos: $_errorMessage');
       notifyListeners();
+    }
+  }
+
+  /// Obtener el nombre de un turno por su ID
+  /// Si los catalogos no están cargados, los carga automáticamente
+  String getTurnoNombre(int? turnoId) {
+    if (turnoId == null) return 'Sin asignar';
+    
+    // Si no hay turnos cargados, intentar cargarlos
+    if (_turnos.isEmpty && !_catalogosCargados) {
+      // Cargar catalogos de forma asíncrona
+      loadCatalogos();
+      // Mientras se cargan, devolver un valor temporal
+      return 'Cargando...';
+    }
+    
+    try {
+      final turno = _turnos.firstWhere((t) => t.id == turnoId);
+      return turno.nombre;
+    } catch (e) {
+      return 'Sin asignar';
+    }
+  }
+
+  /// Obtener el nombre de un departamento por su ID
+  String getDepartamentoNombre(int? departamentoId) {
+    if (departamentoId == null) return 'Sin asignar';
+    
+    if (_departamentos.isEmpty && !_catalogosCargados) {
+      loadCatalogos();
+      return 'Cargando...';
+    }
+    
+    try {
+      final depto = _departamentos.firstWhere((d) => d.id == departamentoId);
+      return depto.nombre;
+    } catch (e) {
+      return 'Sin asignar';
     }
   }
 
@@ -132,32 +178,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// Obtener el nombre de un turno por su ID
-  String getTurnoNombre(int? turnoId) {
-    if (turnoId == null) return 'Sin asignar';
-    try {
-      return _turnos.firstWhere((t) => t.id == turnoId).nombre;
-    } catch (e) {
-      return 'Sin asignar';
-    }
-  }
-
-  /// Obtener el nombre de un departamento por su ID
-  String getDepartamentoNombre(int? departamentoId) {
-    if (departamentoId == null) return 'Sin asignar';
-    try {
-      return _departamentos.firstWhere((d) => d.id == departamentoId).nombre;
-    } catch (e) {
-      return 'Sin asignar';
-    }
-  }
-
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-    /// Actualizar un usuario existente (solo admin)
+  /// Actualizar un usuario existente (solo admin)
   Future<bool> updateUser({
     required String numeroEmpleado,
     required String nombre,
@@ -184,7 +205,6 @@ class UserProvider extends ChangeNotifier {
         turnoId: turnoId,
       );
 
-      // Actualizar la lista local
       final index = _users.indexWhere((u) => u.numeroEmpleado == numeroEmpleado);
       if (index != -1) {
         _users[index] = updatedUser;
@@ -209,10 +229,7 @@ class UserProvider extends ChangeNotifier {
 
     try {
       await _apiService.deleteUser(numeroEmpleado);
-
-      // Eliminar de la lista local
       _users.removeWhere((u) => u.numeroEmpleado == numeroEmpleado);
-
       _isLoading = false;
       notifyListeners();
       return true;
@@ -222,5 +239,10 @@ class UserProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
   }
 }

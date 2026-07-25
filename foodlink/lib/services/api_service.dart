@@ -34,45 +34,48 @@ class ApiService {
   }
 
   /// Iniciar sesión con número de empleado y contraseña
-  Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
-    try {
-      final response = await _dio.post(
-        '$baseUrl/usuarios/login',
-        data: {
-          'username': numeroEmpleado,
-          'password': contrasena,
+Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
+  try {
+    final response = await _dio.post(
+      '$baseUrl/usuarios/login',
+      data: {
+        'username': numeroEmpleado,
+        'password': contrasena,
+      },
+      options: Options(
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        options: Options(
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        ),
-      );
+        
+        validateStatus: (status) => status! < 500,
+      ),
+    );
 
-      if (response.statusCode == 200) {
-        final accessToken = response.data['access_token'] as String;
-        final tokenType = response.data['token_type'] as String;
+    if (response.statusCode == 200) {
+      final accessToken = response.data['access_token'] as String;
+      final tokenType = response.data['token_type'] as String;
 
-        await _storage.write(key: 'access_token', value: accessToken);
-        print('Token guardado correctamente');
+      await _storage.write(key: 'access_token', value: accessToken);
+      print('Token guardado correctamente');
 
-        return {
-          'access_token': accessToken,
-          'token_type': tokenType,
-        };
-      } else {
-        throw Exception('Error al iniciar sesión: ${response.statusCode}');
-      }
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        throw Exception('Número de empleado o contraseña incorrectos');
-      } else if (e.type == DioExceptionType.connectionTimeout) {
-        throw Exception('Error de conexión. Verifica que el backend esté corriendo.');
-      } else {
-        throw Exception('Error al conectar con el servidor: ${e.message}');
-      }
+      return {
+        'access_token': accessToken,
+        'token_type': tokenType,
+      };
+    } else {
+      // Si el status no es 200, lanzar excepción con el mensaje del backend
+      final detail = response.data?['detail'] ?? 'Error al iniciar sesión';
+      throw Exception(detail);
     }
+  } on DioException catch (e) {
+    // Si es un error de Dio, intentar extraer el mensaje
+    if (e.response?.data != null) {
+      final detail = e.response?.data?['detail'] ?? e.message;
+      throw Exception(detail);
+    }
+    throw Exception('Error al conectar con el servidor: ${e.message}');
   }
+}
 
   /// Obtener los datos del usuario actual
   Future<User> getCurrentUser() async {

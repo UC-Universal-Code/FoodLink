@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import '../../models/platillo.dart';
+import '../../providers/auth_provider.dart';
 
 class CrearMenuScreen extends StatefulWidget {
   const CrearMenuScreen({Key? key}) : super(key: key);
@@ -13,7 +15,8 @@ class CrearMenuScreen extends StatefulWidget {
 class _CrearMenuScreenState extends State<CrearMenuScreen> {
   DateTime semanaInicio = DateTime.now();
   DateTime semanaFin = DateTime.now().add(const Duration(days: 6));
-  String turno = 'Matutino';
+
+  String turno = '';
   bool activo = true;
 
   List<Platillo> items = [];
@@ -30,7 +33,14 @@ class _CrearMenuScreenState extends State<CrearMenuScreen> {
     'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'
   ];
   final List<String> tiposComida = ['desayuno', 'almuerzo', 'cena'];
-  final List<String> turnos = ['Matutino', 'Vespertino', 'Nocturno'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Obtener el turno del usuario autenticado
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    turno = authProvider.currentUser?.turnoId.toString() ?? 'Sin turno asignado';
+  }
 
   @override
   void dispose() {
@@ -46,7 +56,8 @@ class _CrearMenuScreenState extends State<CrearMenuScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Crear Menú Semanal'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFF20303D),
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -74,22 +85,41 @@ class _CrearMenuScreenState extends State<CrearMenuScreen> {
                       trailing: const Icon(Icons.calendar_today),
                       onTap: () => _seleccionarFechaFin(context),
                     ),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Turno',
-                        border: OutlineInputBorder(),
+                    // 👇 TURNO BLOQUEADO (solo lectura)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      value: turno,
-                      items: turnos.map((t) {
-                        return DropdownMenuItem(
-                          value: t,
-                          child: Text(t),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) setState(() => turno = value);
-                      },
+                      child: Row(
+                        children: [
+                          const Icon(Icons.schedule, color: Color(0xFF20303D)),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Turno asignado',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Text(
+                                turno,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF20303D),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 12),
                     SwitchListTile(
                       title: const Text('Menú activo'),
                       value: activo,
@@ -199,7 +229,8 @@ class _CrearMenuScreenState extends State<CrearMenuScreen> {
                       label: const Text('Agregar al Menú'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Colors.orange,
+                        backgroundColor: const Color(0xFF20303D),
+                        foregroundColor: Colors.white,
                       ),
                     ),
                   ],
@@ -304,7 +335,6 @@ class _CrearMenuScreenState extends State<CrearMenuScreen> {
         disponible: disponible,
       ));
 
-      // Limpiar campos de entrada
       diaSeleccionado = null;
       tipoComidaSeleccionado = null;
       nombreController.clear();

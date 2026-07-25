@@ -1,3 +1,6 @@
+// lib/screens/auth/login_screen.dart
+
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -52,12 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } else {
-      // Mostrar mensaje limpio del provider
+      final errorMsg = authProvider.errorMessage ?? 'Error al iniciar sesion';
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Error al iniciar sesion'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
+          content: Text(errorMsg),
+          backgroundColor: authProvider.isBloqueado ? Colors.orange : Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
@@ -110,6 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    enabled: !authProvider.isBloqueado,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -139,6 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    enabled: !authProvider.isBloqueado,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -150,13 +156,79 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
+
+                // Mostrar intentos restantes
+                if (authProvider.intentosFallidos > 0 && !authProvider.isBloqueado)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Text(
+                      'Intentos restantes: ${3 - authProvider.intentosFallidos}',
+                      style: TextStyle(
+                        color: (3 - authProvider.intentosFallidos) <= 1 
+                            ? Colors.red 
+                            : Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+
+                // Mostrar bloqueo con temporizador (se actualiza automáticamente)
+                if (authProvider.isBloqueado)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.timer, color: Colors.red.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Cuenta bloqueada',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tiempo restante: ${authProvider.tiempoRestante}',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: _calcularProgreso(authProvider.tiempoRestante),
+                          backgroundColor: Colors.grey.shade200,
+                          color: Colors.red.shade700,
+                          minHeight: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 16),
 
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _login,
+                    onPressed: authProvider.isLoading || authProvider.isBloqueado
+                        ? null 
+                        : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF20303D),
                       foregroundColor: Colors.white,
@@ -194,5 +266,20 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  double _calcularProgreso(String tiempoRestante) {
+    if (tiempoRestante.isEmpty) return 0;
+    final partes = tiempoRestante.split(':');
+    if (partes.length != 2) return 0;
+    
+    final minutos = int.tryParse(partes[0]) ?? 0;
+    final segundos = int.tryParse(partes[1]) ?? 0;
+    final totalSegundos = minutos * 60 + segundos;
+    
+    final maxSegundos = 15 * 60; // 15 minutos
+    final progreso = 1 - (totalSegundos / maxSegundos);
+    
+    return progreso.clamp(0.0, 1.0);
   }
 }
