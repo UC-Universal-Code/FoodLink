@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user.dart';
 import 'create_user_screen.dart';
-import 'edit_user_screen.dart';  // 👈 AGREGAR IMPORT
+import 'edit_user_screen.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -18,8 +18,8 @@ class _UserListScreenState extends State<UserListScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<UserProvider>(context, listen: false);
-      provider.loadCatalogos();  // Cargar turnos y departamentos
-      provider.fetchUsers();      // Cargar usuarios
+      provider.loadCatalogos();
+      provider.fetchUsers();
     });
   }
 
@@ -188,8 +188,9 @@ class _UserListScreenState extends State<UserListScreen> {
         : const Color(0xFFE57373);
     String estadoLabel = user.estado == 'active' ? 'Activo' : 'Inactivo';
 
-    // Obtener el nombre del turno
+    // Obtener nombres de turno y departamento
     String turnoNombre = userProvider.getTurnoNombre(user.turnoId);
+    String departamentoNombre = userProvider.getDepartamentoNombre(user.departamentoId);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -245,6 +246,14 @@ class _UserListScreenState extends State<UserListScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Turno: $turnoNombre',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Departamento: $departamentoNombre',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -321,12 +330,10 @@ class _UserListScreenState extends State<UserListScreen> {
                 ),
               ),
 
-              // 👇 ACCIONES PARA USUARIOS NO ADMIN
               if (user.rol != 'admin')
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Botón Editar
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.blue.withOpacity(0.1),
@@ -352,7 +359,6 @@ class _UserListScreenState extends State<UserListScreen> {
                         splashRadius: 24,
                       ),
                     ),
-                    // Botón Eliminar
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.red.withOpacity(0.1),
@@ -447,7 +453,6 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  // 👇 NUEVO MÉTODO: Confirmar eliminación
   void _confirmDelete(BuildContext context, User user) {
     showDialog(
       context: context,
@@ -535,6 +540,7 @@ class _UserListScreenState extends State<UserListScreen> {
 
     // Obtener nombres
     String turnoNombre = userProvider.getTurnoNombre(user.turnoId);
+    String departamentoNombre = userProvider.getDepartamentoNombre(user.departamentoId);
     String rolLabel = _getRolLabel(user.rol);
 
     showDialog(
@@ -585,11 +591,18 @@ class _UserListScreenState extends State<UserListScreen> {
               color: user.estado == 'active' ? Colors.green : Colors.red,
             ),
             const SizedBox(height: 8),
-            // 👇 TURNO AGREGADO
             _buildDetailRow(
               Icons.schedule,
               'Turno',
               turnoNombre,
+              color: const Color(0xFF20303D),
+            ),
+            const SizedBox(height: 8),
+            // 👇 DEPARTAMENTO AGREGADO
+            _buildDetailRow(
+              Icons.business,
+              'Departamento',
+              departamentoNombre,
               color: const Color(0xFF20303D),
             ),
             const SizedBox(height: 8),

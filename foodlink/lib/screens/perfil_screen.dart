@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
 import '../services/api_service.dart';
 
 class PerfilScreen extends StatefulWidget {
@@ -26,6 +27,18 @@ class _PerfilScreenState extends State<PerfilScreen> {
   bool _obscureConfirmar = true;
   String? _errorMessage;
   String? _successMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cargar catálogos si no están disponibles
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (userProvider.turnos.isEmpty || userProvider.departamentos.isEmpty) {
+        userProvider.loadCatalogos();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -56,7 +69,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.currentUser;
 
-      // Si es temporal, no necesita la contraseña actual
       final contrasenaActual = user?.esTemporal == true
           ? ''
           : _contrasenaActualController.text.trim();
@@ -76,7 +88,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
         _confirmarContrasenaController.clear();
       });
 
-      // Actualizar el estado del usuario en AuthProvider
       authProvider.clearError();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,7 +109,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
     final user = authProvider.currentUser;
+
+    // Obtener nombres del turno y departamento
+    String turnoNombre = userProvider.getTurnoNombre(user?.turnoId) ?? 'Sin asignar';
+    String departamentoNombre = userProvider.getDepartamentoNombre(user?.departamentoId) ?? 'Sin asignar';
 
     return Scaffold(
       appBar: AppBar(
@@ -178,13 +194,19 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ListTile(
                     leading: const Icon(Icons.business, color: Color(0xFF20303D)),
                     title: const Text('Departamento'),
-                    subtitle: Text(user?.departamentoId?.toString() ?? 'Sin asignar'),
+                    subtitle: Text(
+                      departamentoNombre,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.schedule, color: Color(0xFF20303D)),
                     title: const Text('Turno'),
-                    subtitle: Text(user?.turnoId?.toString() ?? 'Sin asignar'),
+                    subtitle: Text(
+                      turnoNombre,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ),
                 ],
               ),
@@ -216,7 +238,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
               ),
             ),
 
-            // Formulario de cambio de contraseña (visible cuando _showChangePassword es true)
+            // Formulario de cambio de contraseña
             if (_showChangePassword)
               Container(
                 margin: const EdgeInsets.only(top: 16),
@@ -230,7 +252,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Contraseña actual (solo si no es temporal)
                       if (user?.esTemporal != true)
                         TextFormField(
                           controller: _contrasenaActualController,
@@ -290,7 +311,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Nueva contraseña
                       TextFormField(
                         controller: _nuevaContrasenaController,
                         obscureText: _obscureNueva,
@@ -340,7 +360,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Confirmar contraseña
                       TextFormField(
                         controller: _confirmarContrasenaController,
                         obscureText: _obscureConfirmar,
@@ -376,7 +395,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
                       const SizedBox(height: 8),
 
-                      // Mensajes de error/éxito
                       if (_errorMessage != null)
                         Container(
                           padding: const EdgeInsets.all(8),
@@ -405,7 +423,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Botón actualizar
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -440,7 +457,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
             const SizedBox(height: 16),
 
-            // Botón cerrar sesión
             SizedBox(
               width: double.infinity,
               height: 45,
