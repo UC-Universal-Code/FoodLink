@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import 'crear_menu_screen.dart';
-import 'editar_menu_screen.dart';
 
 class MisMenusScreen extends StatefulWidget {
   const MisMenusScreen({Key? key}) : super(key: key);
@@ -156,17 +155,6 @@ class _MisMenusScreenState extends State<MisMenusScreen> {
                                   icon: const Icon(Icons.visibility, color: Colors.blue),
                                   onPressed: () {
                                     _mostrarDetalleMenu(context, menu);
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.orange),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => EditarMenuScreen(menuId: menu.id!),
-                                      ),
-                                    ).then((_) => cargarMenus());
                                   },
                                 ),
                                 IconButton(

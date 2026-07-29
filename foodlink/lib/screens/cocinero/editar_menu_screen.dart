@@ -116,17 +116,46 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
                                           },
                                         ),
                                         const SizedBox(height: 8),
+                                        // Campo para editar la Descripción (NUEVO)
+                                        TextFormField(
+                                          initialValue: item.descripcion,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Descripción (opcional)',
+                                            border: OutlineInputBorder(),
+                                            isDense: true,
+                                          ),
+                                          maxLines: 2,
+                                          onChanged: (value) {
+                                            item.descripcion = value;
+                                          },
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Campo para editar los Ingredientes (NUEVO)
+                                        TextFormField(
+                                          initialValue: item.ingredientes ?? '',
+                                          decoration: const InputDecoration(
+                                            labelText: 'Ingredientes (opcional)',
+                                            border: OutlineInputBorder(),
+                                            isDense: true,
+                                          ),
+                                          maxLines: 2,
+                                          onChanged: (value) {
+                                            item.ingredientes = value;
+                                          },
+                                        ),
+                                        const SizedBox(height: 8),
                                         Row(
                                           children: [
                                             // Campo para editar el precio
                                             Expanded(
                                               child: TextFormField(
                                                 initialValue: item.precio.toString(),
-                                                keyboardType: TextInputType.number,
+                                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                                 decoration: const InputDecoration(
                                                   labelText: 'Precio (\$)',
                                                   border: OutlineInputBorder(),
                                                   isDense: true,
+                                                  prefixText: '\$ ',
                                                 ),
                                                 onChanged: (value) {
                                                   item.precio = double.tryParse(value) ?? 0.0;
