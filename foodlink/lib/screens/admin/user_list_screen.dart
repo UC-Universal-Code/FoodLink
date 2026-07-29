@@ -5,6 +5,7 @@ import '../../models/user.dart';
 import 'create_user_screen.dart';
 import 'edit_user_screen.dart';
 
+
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
 
@@ -374,7 +375,7 @@ class _UserListScreenState extends State<UserListScreen> {
                         tooltip: 'Eliminar usuario',
                         splashRadius: 24,
                       ),
-                    ),
+                    ), 
                   ],
                 ),
             ],

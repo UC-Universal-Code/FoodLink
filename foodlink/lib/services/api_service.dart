@@ -116,53 +116,51 @@ class ApiService {
   }
 
   /// Crear un nuevo usuario (solo admin)
-  /// Devuelve el mapa completo para poder extraer contrasena_generada
   Future<Map<String, dynamic>> createUser({
-  required String numeroEmpleado,
-  required String nombre,
-  required String apellido,
-  String? contrasena,  // 👈 Ahora es nullable
-  String rol = 'user',
-  String estado = 'active',
-  int? departamentoId,
-  int? turnoId,
-}) async {
-  try {
-    final Map<String, dynamic> data = {
-      'numero_empleado': numeroEmpleado,
-      'nombre': nombre,
-      'apellido': apellido,
-      'rol': rol,
-      'estado': estado,
-      'departamento_id': departamentoId,
-      'turno_id': turnoId,
-    };
+    required String numeroEmpleado,
+    required String nombre,
+    required String apellido,
+    String? contrasena,
+    String rol = 'user',
+    String estado = 'active',
+    int? departamentoId,
+    int? turnoId,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'numero_empleado': numeroEmpleado,
+        'nombre': nombre,
+        'apellido': apellido,
+        'rol': rol,
+        'estado': estado,
+        'departamento_id': departamentoId,
+        'turno_id': turnoId,
+      };
 
-    // Solo agregar la contraseña si no es null
-    if (contrasena != null && contrasena.isNotEmpty) {
-      data['contrasena'] = contrasena;
-    }
+      if (contrasena != null && contrasena.isNotEmpty) {
+        data['contrasena'] = contrasena;
+      }
 
-    final response = await _dio.post(
-      '$baseUrl/usuarios/',
-      data: data,
-    );
+      final response = await _dio.post(
+        '$baseUrl/usuarios/',
+        data: data,
+      );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return response.data;
-    } else {
-      throw Exception('Error al crear usuario: ${response.statusCode}');
-    }
-  } on DioException catch (e) {
-    if (e.response?.statusCode == 400) {
-      throw Exception('El número de empleado ya existe');
-    } else if (e.response?.statusCode == 403) {
-      throw Exception('Se requiere rol de administrador');
-    } else {
-      throw Exception('Error al crear usuario: ${e.message}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw Exception('Error al crear usuario: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        throw Exception('El número de empleado ya existe');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Se requiere rol de administrador');
+      } else {
+        throw Exception('Error al crear usuario: ${e.message}');
+      }
     }
   }
-}
 
   /// Obtener la lista de todos los turnos
   Future<List<Map<String, dynamic>>> getTurnos() async {
@@ -229,9 +227,18 @@ class ApiService {
   }
 
   /// Obtener el menú actual (para el turno del usuario autenticado)
-  Future<Map<String, dynamic>?> obtenerMenuActual() async {
+  /// Si se pasa fecha, obtiene el menú para esa fecha específica
+  Future<Map<String, dynamic>?> obtenerMenuActual({String? fecha}) async {
     try {
-      final response = await _dio.get('$baseUrl/menu/semanal/actual/');
+      final Map<String, dynamic> queryParams = {};
+      if (fecha != null && fecha.isNotEmpty) {
+        queryParams['fecha'] = fecha;
+      }
+
+      final response = await _dio.get(
+        '$baseUrl/menu/semanal/actual/',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         return response.data;
@@ -502,8 +509,6 @@ class ApiService {
     }
   }
 
-  
-
   /// Cambiar contraseña
   Future<void> cambiarContrasena({
     required String contrasenaActual,
@@ -530,6 +535,4 @@ class ApiService {
       throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
-
-  
 }

@@ -32,47 +32,58 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
   }
 
   Future<void> _cargarMenuActual() async {
-    try {
-      final apiService = ApiService();
+  try {
+    final apiService = ApiService();
 
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    final fechaStr = fechaSeleccionada.toIso8601String().split('T')[0];
+    print('Fecha seleccionada: $fechaStr');
+
+    final data = await apiService.obtenerMenuActual(fecha: fechaStr);
+
+    print('Datos recibidos del backend: $data');
+
+    if (!mounted) return;
+
+    if (data == null) {
       setState(() {
-        isLoading = true;
-      });
-
-      // El backend detecta el turno directamente desde el JWT token enviado
-      final data = await apiService.obtenerMenuActual();
-
-      if (data == null) {
-        if (!mounted) return;
-        setState(() {
-          errorMessage = 'No hay menú disponible para tu turno.';
-          isLoading = false;
-        });
-        return;
-      }
-
-      if (!mounted) return;
-      setState(() {
-        menuSemanal = MenuSemanal.fromJson(data);
-        isLoading = false;
-        errorMessage = null;
-      });
-
-      _filtrarPlatillosPorFecha();
-
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        errorMessage = 'Error al cargar el menú: $e';
+        menuSemanal = null;
+        platillosHoy = [];
+        errorMessage = 'No hay menú disponible para la fecha seleccionada.';
         isLoading = false;
       });
+      return;
     }
+
+    // Verificar que los datos tengan la estructura esperada
+    print('📋 Items en el menú: ${data['items']?.length ?? 0}');
+
+    setState(() {
+      menuSemanal = MenuSemanal.fromJson(data);
+      isLoading = false;
+      errorMessage = null;
+    });
+
+    _filtrarPlatillosPorFecha();
+
+  } catch (e) {
+    print('Error: $e');
+    if (!mounted) return;
+    setState(() {
+      errorMessage = 'Error al cargar el menú: $e';
+      isLoading = false;
+    });
   }
+}
 
   void _filtrarPlatillosPorFecha() {
     if (menuSemanal == null) return;
 
-    final diaIndex = fechaSeleccionada.weekday - 1; // 0 = Lunes, 6 = Domingo
+    final diaIndex = fechaSeleccionada.weekday - 1;
     final diaBuscado = diasSemana[diaIndex];
 
     final itemsFiltrados = menuSemanal!.items.where((item) {
@@ -108,7 +119,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
       setState(() {
         fechaSeleccionada = picked;
       });
-      _filtrarPlatillosPorFecha();
+      await _cargarMenuActual();
     }
   }
 
@@ -176,7 +187,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Menú del Día',
+                        'Menú de la Semana',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -290,8 +301,7 @@ class _TrabajadorHomeState extends State<TrabajadorHome> {
               MaterialPageRoute(builder: (context) => const ReportarScreen()),
             );
           } else if (index == 2){
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()));
           }
         },
       ),
