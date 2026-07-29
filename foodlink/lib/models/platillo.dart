@@ -2,15 +2,15 @@
 /// Basado en los casos de uso C4, C5, C6 del documento S-SDLC
 class Platillo {
   final int? id;
-  final String nombre;
-  final String descripcion;
-  final String? imagenUrl; 
-  final String diaSemana;      // "lunes", "martes", etc.
-  final String tipoComida;     // "desayuno", "almuerzo", "cena"
-  final String? ingredientes;
-  final int? limitePorciones;
-  final double precio;
-  final bool disponible;
+  String nombre;         // <-- Sin 'final' para poder editarlo
+  String descripcion;    // <-- Sin 'final'
+  String? imagenUrl; 
+  String diaSemana;      // "lunes", "martes", etc.
+  String tipoComida;     // "desayuno", "almuerzo", "cena"
+  String? ingredientes;
+  int? limitePorciones;
+  double precio;         // <-- Sin 'final' para poder editarlo
+  bool disponible;       // <-- Sin 'final' para poder cambiar el interruptor
 
   Platillo({
     this.id,

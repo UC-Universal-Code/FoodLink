@@ -76,20 +76,85 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
                               ),
                               const SizedBox(height: 16),
                               const Text(
-                                'Platillos:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                'Platillos (Editables):',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                               const SizedBox(height: 8),
-                              ...menu!.items.map((item) => ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  item.disponible ? Icons.check_circle : Icons.cancel,
-                                  color: item.disponible ? Colors.green : Colors.red,
-                                ),
-                                title: Text(item.nombre),
-                                subtitle: Text('${_capitalize(item.diaSemana)} - ${_capitalize(item.tipoComida)}'),
-                                trailing: Text('\$${item.precio.toStringAsFixed(2)}'),
-                              )),
+                              
+                              // Mapeamos los platillos convirtiéndolos en formularios editables
+                              ...menu!.items.map((item) {
+                                return Card(
+                                  elevation: 1,
+                                  margin: const EdgeInsets.symmetric(vertical: 8),
+                                  color: Colors.grey[50],
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${_capitalize(item.diaSemana)} - ${_capitalize(item.tipoComida)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Campo para editar el nombre del plato
+                                        TextFormField(
+                                          initialValue: item.nombre,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Nombre del platillo',
+                                            border: OutlineInputBorder(),
+                                            isDense: true,
+                                          ),
+                                          onChanged: (value) {
+                                            item.nombre = value;
+                                          },
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            // Campo para editar el precio
+                                            Expanded(
+                                              child: TextFormField(
+                                                initialValue: item.precio.toString(),
+                                                keyboardType: TextInputType.number,
+                                                decoration: const InputDecoration(
+                                                  labelText: 'Precio (\$)',
+                                                  border: OutlineInputBorder(),
+                                                  isDense: true,
+                                                ),
+                                                onChanged: (value) {
+                                                  item.precio = double.tryParse(value) ?? 0.0;
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            // Switch para la disponibilidad individual
+                                            Row(
+                                              children: [
+                                                const Text('Disponible'),
+                                                Switch(
+                                                  value: item.disponible,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      item.disponible = value;
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
                             ],
                           ),
                         ),
@@ -103,7 +168,7 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
                         ),
                         child: const Text(
                           'Actualizar Menú',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                       ),
                     ],
@@ -112,14 +177,13 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
     );
   }
 
-    void _actualizarMenu() async {
+  void _actualizarMenu() async {
     try {
-      // 1. Mapeamos cada platillo asegurando los nombres de atributos que espera Pydantic
       final List<Map<String, dynamic>> itemsPayload = menu!.items.map((item) {
         return {
-          'dia_semana': item.diaSemana,      // Manda "lunes", "martes", etc.
-          'tipo_comida': item.tipoComida,    // Manda "almuerzo", "cena", etc.
-          'nombre_plato': item.nombre,       // Atributo exacto en Python
+          'dia_semana': item.diaSemana,
+          'tipo_comida': item.tipoComida,
+          'nombre_plato': item.nombre,
           'descripcion': item.descripcion,
           'ingredientes': item.ingredientes,
           'imagen_url': item.imagenUrl,
@@ -129,7 +193,6 @@ class _EditarMenuScreenState extends State<EditarMenuScreen> {
         };
       }).toList();
 
-      // 2. Construimos el JSON principal del menú
       final Map<String, dynamic> body = {
         'activo': activo,
         'turno': menu!.turno,
