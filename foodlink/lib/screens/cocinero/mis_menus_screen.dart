@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/menu_model.dart';
 import 'crear_menu_screen.dart';
+import 'editar_menu_screen.dart';
 
 class MisMenusScreen extends StatefulWidget {
   const MisMenusScreen({Key? key}) : super(key: key);
@@ -158,6 +159,17 @@ class _MisMenusScreenState extends State<MisMenusScreen> {
                                   },
                                 ),
                                 IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.orange),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => EditarMenuScreen(menuId: menu.id!),
+                                      ),
+                                    ).then((_) => cargarMenus());
+                                  },
+                                ),
+                                IconButton(
                                   icon: const Icon(Icons.delete, color: Colors.red),
                                   onPressed: () => _confirmarEliminar(menu.id!),
                                 ),
@@ -205,32 +217,69 @@ class _MisMenusScreenState extends State<MisMenusScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ...menu.items.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      item.disponible ? Icons.check_circle : Icons.cancel,
-                      color: item.disponible ? Colors.green : Colors.red,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
+              
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: menu.items.length,
+                  itemBuilder: (context, index) {
+                    final item = menu.items[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              item.disponible ? Icons.check_circle : Icons.cancel,
+                              color: item.disponible ? Colors.green : Colors.red,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_capitalize(item.diaSemana)} - ${_capitalize(item.tipoComida)}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  item.nombre,
+                                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                ),
+                                // Validación corregida (sin chequeo de nulos innecesario)
+                                if (item.descripcion.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item.descripcion,
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                  ),
+                                ],
+                                // Validación para ingredientes (mantenemos si es String? o también solo isNotEmpty si es String estricto)
+                                if (item.ingredientes != null && item.ingredientes!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Ingredientes: ${item.ingredientes}',
+                                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            '${_capitalize(item.diaSemana)} - ${_capitalize(item.tipoComida)}',
+                            '\$${item.precio.toStringAsFixed(2)}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text(item.nombre),
                         ],
                       ),
-                    ),
-                    Text('\$${item.precio.toStringAsFixed(2)}'),
-                  ],
+                    );
+                  },
                 ),
-              )),
+              ),
             ],
           ),
         ),
