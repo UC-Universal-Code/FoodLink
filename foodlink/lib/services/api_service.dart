@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 
@@ -17,9 +18,9 @@ class ApiService {
           final token = await _storage.read(key: 'access_token');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
-            print('Token enviado: ${token.substring(0, 20)}...');
-          } else {
-            print('No hay token guardado');
+            // 2. Protegido con kDebugMode
+            if (kDebugMode) {
+            }
           }
           return handler.next(options);
         },
@@ -94,9 +95,6 @@ class ApiService {
     try {
       final response = await _dio.get('$baseUrl/usuarios/');
 
-      print('Respuesta de /usuarios/: ${response.statusCode}');
-      print('Datos recibidos: ${response.data}');
-
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
         return data.map((json) => User.fromJson(json)).toList();
@@ -104,7 +102,6 @@ class ApiService {
         throw Exception('Error al obtener usuarios: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      print('Error en getAllUsers: ${e.message}');
       if (e.response?.statusCode == 403) {
         throw Exception('Se requiere rol de administrador');
       } else if (e.response?.statusCode == 401) {
@@ -195,7 +192,6 @@ class ApiService {
   /// Cerrar sesión - eliminar token
   Future<void> logout() async {
     await _storage.delete(key: 'access_token');
-    print('Sesión cerrada');
   }
 
   // ========== MENÚ SEMANAL ==========
