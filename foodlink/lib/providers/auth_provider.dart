@@ -60,8 +60,8 @@ class AuthProvider extends ChangeNotifier {
           _tiempoRestante = '$minutos:${segundos.toString().padLeft(2, '0')}';
           _errorMessage = 'Cuenta bloqueada. Tiempo restante: $_tiempoRestante';
         } else {
-          _bloqueoHasta = DateTime.now().add(const Duration(minutes: 15));
-          _tiempoRestante = '15:00';
+          _bloqueoHasta = DateTime.now().add(const Duration(minutes: 1));
+          _tiempoRestante = '1:00';
           _errorMessage = 'Cuenta bloqueada por 15 minutos';
         }
         
@@ -73,8 +73,19 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = 'Cuenta desactivada. Contacta al administrador.';
       } else if (errorMessage.contains('incorrectos') || errorMessage.contains('Incorrectos')) {
         _intentosFallidos++;
-        _errorMessage = 'Numero de empleado o contrasena incorrectos';
         print('Intentos fallidos: $_intentosFallidos');
+
+        // Si llega a 3 intentos fallidos, bloqueamos localmente por 15 minutos
+        if (_intentosFallidos >= 3) {
+          _bloqueado = true;
+          _bloqueoHasta = DateTime.now().add(const Duration(minutes: 1));
+          _tiempoRestante = '1:00';
+          _errorMessage = 'Cuenta bloqueada temporalmente por exceso de intentos.';
+          _iniciarTemporizador();
+        } else {
+          final restantes = 3 - _intentosFallidos;
+          _errorMessage = 'Numero de empleado o contrasena incorrectos. Te quedan $restantes intentos.';
+        }
       } else {
         _errorMessage = errorMessage;
       }
@@ -103,6 +114,10 @@ class AuthProvider extends ChangeNotifier {
         _bloqueoHasta = null;
         _timer?.cancel();
         _timer = null;
+        // Reiniciamos los intentos fallidos para que pueda volver a intentar
+        _intentosFallidos = 0;
+        // Limpiamos el mensaje de error de bloqueo
+        _errorMessage = null;
         notifyListeners();
         return;
       }
