@@ -1,7 +1,9 @@
+// lib/screens/perfil_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../models/user.dart';
 import '../services/api_service.dart';
 
 class PerfilScreen extends StatefulWidget {
@@ -13,8 +15,8 @@ class PerfilScreen extends StatefulWidget {
 
 class _PerfilScreenState extends State<PerfilScreen> {
   final ApiService _apiService = ApiService();
+  bool _isLoadingPerfil = true;
 
-  // Controladores para el cambio de contraseña
   final _formKey = GlobalKey<FormState>();
   final _contrasenaActualController = TextEditingController();
   final _nuevaContrasenaController = TextEditingController();
@@ -31,13 +33,35 @@ class _PerfilScreenState extends State<PerfilScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar catálogos si no están disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      if (userProvider.turnos.isEmpty || userProvider.departamentos.isEmpty) {
-        userProvider.loadCatalogos();
-      }
+      _cargarPerfil();
     });
+  }
+
+  Future<void> _cargarPerfil() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      if (userProvider.turnos.isEmpty || userProvider.departamentos.isEmpty) {
+        await userProvider.loadCatalogos();
+      }
+
+      await authProvider.refreshUser();
+
+      if (mounted) {
+        setState(() {
+          _isLoadingPerfil = false;
+        });
+      }
+    } catch (e) {
+      print('Error al cargar perfil: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingPerfil = false;
+        });
+      }
+    }
   }
 
   @override
@@ -53,7 +77,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
     if (_nuevaContrasenaController.text != _confirmarContrasenaController.text) {
       setState(() {
-        _errorMessage = 'Las contraseñas no coinciden';
+        _errorMessage = 'Las contrasenas no coinciden';
         _successMessage = null;
       });
       return;
@@ -69,18 +93,37 @@ class _PerfilScreenState extends State<PerfilScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.currentUser;
 
-      final contrasenaActual = user?.esTemporal == true
+      final contrasenaActual = (user?.esTemporal == true)
           ? ''
           : _contrasenaActualController.text.trim();
 
-      await _apiService.cambiarContrasena(
+      final response = await _apiService.cambiarContrasena(
         contrasenaActual: contrasenaActual,
         nuevaContrasena: _nuevaContrasenaController.text.trim(),
       );
 
+      // Procesar la respuesta
+      if (response != null && response is Map<String, dynamic>) {
+        if (response.containsKey('usuario') && response['usuario'] != null) {
+          final userData = response['usuario'] as Map<String, dynamic>;
+          try {
+            final updatedUser = User.fromJson(userData);
+            authProvider.updateCurrentUser(updatedUser);
+          } catch (e) {
+            // Si falla al parsear el usuario, recargar desde el backend
+            print('Error al parsear usuario: $e');
+            await authProvider.refreshUser();
+          }
+        } else {
+          await authProvider.refreshUser();
+        }
+      } else {
+        await authProvider.refreshUser();
+      }
+
       setState(() {
         _isLoading = false;
-        _successMessage = 'Contraseña actualizada exitosamente';
+        _successMessage = 'Contrasena actualizada exitosamente';
         _errorMessage = null;
         _showChangePassword = false;
         _contrasenaActualController.clear();
@@ -92,14 +135,28 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Contraseña actualizada exitosamente'),
+          content: Text('Contrasena actualizada exitosamente'),
           backgroundColor: Colors.green,
         ),
       );
-
     } catch (e) {
+      // Capturar cualquier error y mostrar un mensaje amigable
+      String errorMsg = 'Ocurrió un error al cambiar la contraseña. Intenta nuevamente.';
+      if (e.toString().contains('incorrecta')) {
+        errorMsg = 'Contraseña actual incorrecta.';
+      } else if (e.toString().contains('caracteres')) {
+        errorMsg = 'La nueva contraseña debe tener al menos 8 caracteres.';
+      } else if (e.toString().contains('mayuscula')) {
+        errorMsg = 'La nueva contraseña debe tener al menos una mayúscula.';
+      } else if (e.toString().contains('minuscula')) {
+        errorMsg = 'La nueva contraseña debe tener al menos una minúscula.';
+      } else if (e.toString().contains('numero')) {
+        errorMsg = 'La nueva contraseña debe tener al menos un número.';
+      } else if (e.toString().contains('especial')) {
+        errorMsg = 'La nueva contraseña debe tener al menos un carácter especial.';
+      }
       setState(() {
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = errorMsg;
         _successMessage = null;
         _isLoading = false;
       });
@@ -112,9 +169,23 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final user = authProvider.currentUser;
 
-    // Obtener nombres del turno y departamento
-    String turnoNombre = userProvider.getTurnoNombre(user?.turnoId) ?? 'Sin asignar';
-    String departamentoNombre = userProvider.getDepartamentoNombre(user?.departamentoId) ?? 'Sin asignar';
+    if (_isLoadingPerfil) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Mi Perfil'),
+          backgroundColor: const Color(0xFF20303D),
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final String turnoNombre =
+        userProvider.getTurnoNombre(user?.turnoId) ?? 'Sin asignar';
+    final String departamentoNombre =
+        userProvider.getDepartamentoNombre(user?.departamentoId) ?? 'Sin asignar';
 
     return Scaffold(
       appBar: AppBar(
@@ -132,7 +203,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
               radius: 50,
               backgroundColor: const Color(0xFF20303D),
               child: Text(
-                user != null && user.nombre.isNotEmpty
+                (user != null && user.nombre.isNotEmpty)
                     ? user.nombre[0].toUpperCase()
                     : '?',
                 style: const TextStyle(
@@ -144,7 +215,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              user != null
+              (user != null)
                   ? '${user.nombre} ${user.apellido}'
                   : 'Usuario FoodLink',
               style: const TextStyle(
@@ -163,13 +234,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
             const SizedBox(height: 8),
             if (user?.esTemporal == true)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.orange.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  '⚠️ Contraseña temporal - Debes cambiarla',
+                  'Contrasena temporal - Debes cambiarla',
                   style: TextStyle(
                     color: Colors.orange,
                     fontWeight: FontWeight.w500,
@@ -213,7 +285,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Botón para mostrar/ocultar cambio de contraseña
             OutlinedButton.icon(
               onPressed: () {
                 setState(() {
@@ -227,7 +298,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 color: const Color(0xFF20303D),
               ),
               label: Text(
-                _showChangePassword ? 'Cancelar cambio' : 'Cambiar contraseña',
+                _showChangePassword ? 'Cancelar cambio' : 'Cambiar contrasena',
                 style: const TextStyle(color: Color(0xFF20303D)),
               ),
               style: OutlinedButton.styleFrom(
@@ -238,7 +309,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
               ),
             ),
 
-            // Formulario de cambio de contraseña
             if (_showChangePassword)
               Container(
                 margin: const EdgeInsets.only(top: 16),
@@ -257,7 +327,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                           controller: _contrasenaActualController,
                           obscureText: _obscureActual,
                           decoration: InputDecoration(
-                            labelText: 'Contraseña Actual',
+                            labelText: 'Contrasena Actual',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -277,7 +347,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Ingresa tu contraseña actual';
+                              return 'Ingresa tu contrasena actual';
                             }
                             return null;
                           },
@@ -298,7 +368,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Estás usando una contraseña temporal. No necesitas ingresar la actual.',
+                                  'Estas usando una contrasena temporal. '
+                                  'No necesitas ingresar la actual.',
                                   style: TextStyle(
                                     color: Colors.orange.shade700,
                                     fontSize: 14,
@@ -315,7 +386,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         controller: _nuevaContrasenaController,
                         obscureText: _obscureNueva,
                         decoration: InputDecoration(
-                          labelText: 'Nueva Contraseña',
+                          labelText: 'Nueva Contrasena',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -333,27 +404,29 @@ class _PerfilScreenState extends State<PerfilScreen> {
                             },
                           ),
                           helperText:
-                              'Mínimo 8 caracteres, mayúscula, minúscula, número y especial',
+                              'Minimo 8 caracteres, mayuscula, minuscula, '
+                              'numero y especial',
                           helperMaxLines: 2,
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'La contraseña es obligatoria';
+                            return 'La contrasena es obligatoria';
                           }
                           if (value.length < 8) {
-                            return 'Mínimo 8 caracteres';
+                            return 'Minimo 8 caracteres';
                           }
                           if (!value.contains(RegExp(r'[A-Z]'))) {
-                            return 'Debe tener al menos una mayúscula';
+                            return 'Debe tener al menos una mayuscula';
                           }
                           if (!value.contains(RegExp(r'[a-z]'))) {
-                            return 'Debe tener al menos una minúscula';
+                            return 'Debe tener al menos una minuscula';
                           }
                           if (!value.contains(RegExp(r'[0-9]'))) {
-                            return 'Debe tener al menos un número';
+                            return 'Debe tener al menos un numero';
                           }
-                          if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}<>|]'))) {
-                            return 'Debe tener al menos un carácter especial';
+                          if (!value.contains(
+                              RegExp(r'[!@#$%^&*(),.?":{}<>|]'))) {
+                            return 'Debe tener al menos un caracter especial';
                           }
                           return null;
                         },
@@ -364,7 +437,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         controller: _confirmarContrasenaController,
                         obscureText: _obscureConfirmar,
                         decoration: InputDecoration(
-                          labelText: 'Confirmar Contraseña',
+                          labelText: 'Confirmar Contrasena',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -384,10 +457,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Confirma tu contraseña';
+                            return 'Confirma tu contrasena';
                           }
                           if (value != _nuevaContrasenaController.text) {
-                            return 'Las contraseñas no coinciden';
+                            return 'Las contrasenas no coinciden';
                           }
                           return null;
                         },
@@ -445,7 +518,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                                   ),
                                 )
                               : const Text(
-                                  'Actualizar Contraseña',
+                                  'Actualizar Contrasena',
                                   style: TextStyle(fontSize: 16),
                                 ),
                         ),
@@ -474,7 +547,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ),
                 ),
                 child: const Text(
-                  'Cerrar Sesión',
+                  'Cerrar Sesion',
                   style: TextStyle(fontSize: 16),
                 ),
               ),

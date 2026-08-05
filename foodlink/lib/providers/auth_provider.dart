@@ -25,6 +25,22 @@ class AuthProvider extends ChangeNotifier {
   String get tiempoRestante => _tiempoRestante;
   int get intentosFallidos => _intentosFallidos;
 
+  /// Recargar los datos del usuario actual
+  Future<void> refreshUser() async {
+    try {
+      _currentUser = await _apiService.getCurrentUser();
+      notifyListeners();
+    } catch (e) {
+      print('Error al refrescar usuario: $e');
+    }
+  }
+
+  /// Actualizar el usuario actual con nuevos datos
+  void updateCurrentUser(User user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
   Future<bool> login(String numeroEmpleado, String contrasena) async {
     _isLoading = true;
     _errorMessage = null;
@@ -50,7 +66,6 @@ class AuthProvider extends ChangeNotifier {
           errorMessage.contains('Tiempo restante')) {
         _bloqueado = true;
         
-        // Extraer el tiempo restante del mensaje
         final match = RegExp(r'Tiempo restante: (\d+):(\d+)').firstMatch(errorMessage);
         if (match != null) {
           final minutos = int.parse(match.group(1)!);
@@ -65,9 +80,7 @@ class AuthProvider extends ChangeNotifier {
           _errorMessage = 'Cuenta bloqueada por 15 minutos';
         }
         
-        // Iniciar el temporizador para actualizar el tiempo
         _iniciarTemporizador();
-        
         _intentosFallidos = 0;
       } else if (errorMessage.contains('Cuenta desactivada') || errorMessage.contains('desactivada')) {
         _errorMessage = 'Cuenta desactivada. Contacta al administrador.';
@@ -75,7 +88,6 @@ class AuthProvider extends ChangeNotifier {
         _intentosFallidos++;
         print('Intentos fallidos: $_intentosFallidos');
 
-        // Si llega a 3 intentos fallidos, bloqueamos localmente por 15 minutos
         if (_intentosFallidos >= 3) {
           _bloqueado = true;
           _bloqueoHasta = DateTime.now().add(const Duration(minutes: 1));
@@ -108,15 +120,12 @@ class AuthProvider extends ChangeNotifier {
       final diferencia = _bloqueoHasta!.difference(ahora);
 
       if (diferencia.isNegative || diferencia.inSeconds <= 0) {
-        // El bloqueo terminó
         _bloqueado = false;
         _tiempoRestante = '';
         _bloqueoHasta = null;
         _timer?.cancel();
         _timer = null;
-        // Reiniciamos los intentos fallidos para que pueda volver a intentar
         _intentosFallidos = 0;
-        // Limpiamos el mensaje de error de bloqueo
         _errorMessage = null;
         notifyListeners();
         return;

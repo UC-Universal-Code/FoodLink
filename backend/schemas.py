@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, constr
 
@@ -21,9 +21,10 @@ class UsuarioBase(BaseModel):
     turno_id: Optional[int] = None
 
 class UsuarioCrear(UsuarioBase):
-    contrasena: constr(strip_whitespace=True, min_length=6)
+    contrasena: Optional[constr(strip_whitespace=True, min_length=6)] = None
     rol: Optional[constr(strip_whitespace=True, min_length=1)] = "user"
     estado: Optional[constr(strip_whitespace=True, min_length=1)] = "active"
+    es_temporal: Optional[bool] = True
 
 class UsuarioLeer(UsuarioBase):
     id: int
@@ -31,12 +32,13 @@ class UsuarioLeer(UsuarioBase):
     estado: str
     creado_en: datetime
     actualizado_en: datetime
+    es_temporal: Optional[bool] = True
+    contrasena_temporal: Optional[bool] = True
+    contrasena_generada: Optional[str] = None
 
     class Config:
         from_attributes = True
-        
-        
-        
+
 class TurnoLeer(BaseModel):
     id: int
     nombre: str
@@ -47,7 +49,6 @@ class TurnoLeer(BaseModel):
     class Config:
         from_attributes = True
 
-
 class DepartamentoLeer(BaseModel):
     id: int
     nombre: str
@@ -56,10 +57,16 @@ class DepartamentoLeer(BaseModel):
     class Config:
         from_attributes = True
 
+class UsuarioActualizar(BaseModel):
+    nombre: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    apellido: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    contrasena: Optional[constr(strip_whitespace=True, min_length=6)] = None
+    rol: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    estado: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    departamento_id: Optional[int] = None
+    turno_id: Optional[int] = None
 
-
-# ========== SCHEMAS PARA MENÚ SEMANAL
-from datetime import date  
+# ========== SCHEMAS PARA MENÚ SEMANAL ==========
 
 class MenuItemBase(BaseModel):
     dia_semana: str
@@ -89,7 +96,7 @@ class MenuItemActualizar(BaseModel):
 class MenuItemLeer(MenuItemBase):
     id: int
     menu_semanal_id: int
-    
+
     class Config:
         from_attributes = True
 
@@ -115,18 +122,9 @@ class MenuSemanalLeer(MenuSemanalBase):
     actualizado_en: datetime
     items: List[MenuItemLeer] = []
     creado_por: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
-
-class UsuarioActualizar(BaseModel):
-    nombre: Optional[constr(strip_whitespace=True, min_length=1)] = None
-    apellido: Optional[constr(strip_whitespace=True, min_length=1)] = None
-    contrasena: Optional[constr(strip_whitespace=True, min_length=6)] = None
-    rol: Optional[constr(strip_whitespace=True, min_length=1)] = None
-    estado: Optional[constr(strip_whitespace=True, min_length=1)] = None
-    departamento_id: Optional[int] = None
-    turno_id: Optional[int] = None
 
 # Reconstruir modelos para resolver referencias circulares
 MenuSemanalCrear.model_rebuild()

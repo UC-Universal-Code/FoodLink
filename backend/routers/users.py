@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import secrets
+import string
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -32,7 +34,13 @@ ADMIN_POR_DEFECTO_CONTRASENA = "Admin1234"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
 
-# funciones para trabajar con contrasenas y tokens
+# ========== FUNCION PARA GENERAR CONTRASEÑA ==========
+def generar_contrasena_temporal(longitud: int = 12) -> str:
+    caracteres = string.ascii_letters + string.digits + "!@#$%^&*"
+    contrasena = ''.join(secrets.choice(caracteres) for _ in range(longitud))
+    return contrasena
+
+# ========== FUNCIONES DE AUTENTICACION ==========
 
 def verificar_contrasena(contrasena_plana: str, hash_contrasena: str) -> bool:
     return pwd_context.verify(contrasena_plana, hash_contrasena)
@@ -174,27 +182,59 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": token_acceso, "token_type": "bearer"}
 
 
+# ========== CREAR USUARIO ==========
 @router.post("/", response_model=UsuarioLeer)
-def crear_usuario(usuario_in: UsuarioCrear, db: Session = Depends(obtener_bd), _: Usuario = Depends(obtener_usuario_admin_actual)):
+def crear_usuario(
+    usuario_in: UsuarioCrear, 
+    db: Session = Depends(obtener_bd), 
+    _: Usuario = Depends(obtener_usuario_admin_actual)
+):
+    print("\n" + "="*50)
+    print("📥 DATOS RECIBIDOS:")
+    print(f"   numero_empleado: {usuario_in.numero_empleado}")
+    print(f"   nombre: {usuario_in.nombre}")
+    print(f"   apellido: {usuario_in.apellido}")
+    print(f"   rol: {usuario_in.rol}")
+    print(f"   estado: {usuario_in.estado}")
+    print(f"   departamento_id: {usuario_in.departamento_id}")
+    print(f"   turno_id: {usuario_in.turno_id}")
+    print(f"   contrasena: {'***' if usuario_in.contrasena else 'VACIA (se generara)'}")
+    print("="*50 + "\n")
+    
     usuario_existente = obtener_usuario_por_numero_empleado(db, usuario_in.numero_empleado)
     if usuario_existente:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El numero de empleado ya existe")
+    
+    # Generar contraseña si no se proporciona
+    if usuario_in.contrasena and usuario_in.contrasena.strip():
+        contrasena_plana = usuario_in.contrasena
+        es_temporal = True
+    else:
+        contrasena_plana = generar_contrasena_temporal()
+        es_temporal = True
+    
     usuario = Usuario(
         numero_empleado=usuario_in.numero_empleado,
         nombre=usuario_in.nombre,
         apellido=usuario_in.apellido,
-        hash_contrasena=obtener_hash_contrasena(usuario_in.contrasena),
+        hash_contrasena=obtener_hash_contrasena(contrasena_plana),
         rol=usuario_in.rol or "user",
         departamento_id=usuario_in.departamento_id,
         turno_id=usuario_in.turno_id,
         estado=usuario_in.estado or "active",
         creado_en=datetime.utcnow(),
         actualizado_en=datetime.utcnow(),
+        es_temporal=es_temporal,
+        contrasena_temporal=es_temporal,
     )
     db.add(usuario)
     db.commit()
     db.refresh(usuario)
-    return usuario
+    
+    # Devolver la contraseña generada
+    result = usuario.__dict__.copy()
+    result["contrasena_generada"] = contrasena_plana if es_temporal else None
+    return result
 
 
 @router.get("/me", response_model=UsuarioLeer)
@@ -323,3 +363,114 @@ def eliminar_usuario(
     db.commit()
     
     return {"message": f"Usuario {usuario.nombre} {usuario.apellido} eliminado correctamente"}
+
+
+# ========== CAMBIAR CONTRASEÑA ==========
+@router.post("/cambiar-contrasena")
+def cambiar_contrasena(
+    request_data: dict,
+    db: Session = Depends(obtener_bd),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual)
+):
+    """
+    Permite al usuario cambiar su contraseña.
+    Si es contraseña temporal, no requiere la contraseña actual.
+    """
+    contrasena_actual = request_data.get('contrasena_actual', '')
+    nueva_contrasena = request_data.get('nueva_contrasena', '')
+    
+    print("\n" + "="*50)
+    print("📥 CAMBIAR CONTRASEÑA:")
+    print(f"   Usuario: {usuario_actual.numero_empleado}")
+    print(f"   contrasena_actual: {'***' if contrasena_actual else 'VACIA'}")
+    print(f"   nueva_contrasena: {'***' if nueva_contrasena else 'VACIA'}")
+    print("="*50 + "\n")
+    
+    # Validar nueva contraseña
+    if len(nueva_contrasena) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos 8 caracteres"
+        )
+    
+    if not any(c.isupper() for c in nueva_contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos una mayuscula"
+        )
+    
+    if not any(c.islower() for c in nueva_contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos una minuscula"
+        )
+    
+    if not any(c.isdigit() for c in nueva_contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos un numero"
+        )
+    
+    caracteres_especiales = "!@#$%^&*(),.?\":{}|<>"
+    if not any(c in caracteres_especiales for c in nueva_contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos un caracter especial"
+        )
+    
+    # Si es contraseña temporal, no necesita verificar la actual
+    if usuario_actual.contrasena_temporal:
+        usuario_actual.hash_contrasena = obtener_hash_contrasena(nueva_contrasena)
+        usuario_actual.contrasena_temporal = False
+        usuario_actual.es_temporal = False
+        usuario_actual.actualizado_en = datetime.utcnow()
+        db.commit()
+        db.refresh(usuario_actual)
+        
+        # Devolver el usuario actualizado
+        return {
+            "message": "Contraseña actualizada exitosamente",
+            "usuario": {
+                "id": usuario_actual.id,
+                "numero_empleado": usuario_actual.numero_empleado,
+                "nombre": usuario_actual.nombre,
+                "apellido": usuario_actual.apellido,
+                "rol": usuario_actual.rol,
+                "estado": usuario_actual.estado,
+                "departamento_id": usuario_actual.departamento_id,
+                "turno_id": usuario_actual.turno_id,
+                "es_temporal": usuario_actual.es_temporal,
+                "contrasena_temporal": usuario_actual.contrasena_temporal
+            }
+        }
+    
+    # Si no es temporal, verificar la contraseña actual
+    if not verificar_contrasena(contrasena_actual, usuario_actual.hash_contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña actual incorrecta"
+        )
+    
+    usuario_actual.hash_contrasena = obtener_hash_contrasena(nueva_contrasena)
+    usuario_actual.contrasena_temporal = False
+    usuario_actual.es_temporal = False
+    usuario_actual.actualizado_en = datetime.utcnow()
+    db.commit()
+    db.refresh(usuario_actual)
+    
+    # Devolver el usuario actualizado
+    return {
+        "message": "Contraseña actualizada exitosamente",
+        "usuario": {
+            "id": usuario_actual.id,
+            "numero_empleado": usuario_actual.numero_empleado,
+            "nombre": usuario_actual.nombre,
+            "apellido": usuario_actual.apellido,
+            "rol": usuario_actual.rol,
+            "estado": usuario_actual.estado,
+            "departamento_id": usuario_actual.departamento_id,
+            "turno_id": usuario_actual.turno_id,
+            "es_temporal": usuario_actual.es_temporal,
+            "contrasena_temporal": usuario_actual.contrasena_temporal
+        }
+    }

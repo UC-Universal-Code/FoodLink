@@ -18,9 +18,6 @@ class ApiService {
           final token = await _storage.read(key: 'access_token');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
-            // 2. Protegido con kDebugMode
-            if (kDebugMode) {
-            }
           }
           return handler.next(options);
         },
@@ -34,7 +31,7 @@ class ApiService {
     );
   }
 
-  /// Iniciar sesión con número de empleado y contraseña
+  /// Iniciar sesion con numero de empleado y contrasena
   Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
     try {
       final response = await _dio.post(
@@ -56,14 +53,13 @@ class ApiService {
         final tokenType = response.data['token_type'] as String;
 
         await _storage.write(key: 'access_token', value: accessToken);
-        print('Token guardado correctamente');
 
         return {
           'access_token': accessToken,
           'token_type': tokenType,
         };
       } else {
-        final detail = response.data?['detail'] ?? 'Error al iniciar sesión';
+        final detail = response.data?['detail'] ?? 'Error al iniciar sesion';
         throw Exception(detail);
       }
     } on DioException catch (e) {
@@ -105,7 +101,7 @@ class ApiService {
       if (e.response?.statusCode == 403) {
         throw Exception('Se requiere rol de administrador');
       } else if (e.response?.statusCode == 401) {
-        throw Exception('No autenticado. Inicia sesión nuevamente.');
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
       } else {
         throw Exception('Error al obtener usuarios: ${e.message}');
       }
@@ -150,7 +146,7 @@ class ApiService {
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
-        throw Exception('El número de empleado ya existe');
+        throw Exception('El numero de empleado ya existe');
       } else if (e.response?.statusCode == 403) {
         throw Exception('Se requiere rol de administrador');
       } else {
@@ -189,14 +185,13 @@ class ApiService {
     }
   }
 
-  /// Cerrar sesión - eliminar token
+  /// Cerrar sesion - eliminar token
   Future<void> logout() async {
     await _storage.delete(key: 'access_token');
   }
 
-  // ========== MENÚ SEMANAL ==========
+  // ========== MENU SEMANAL ==========
 
-  /// Crear un menú semanal (solo cocinero/admin)
   Future<Map<String, dynamic>> crearMenuSemanal(Map<String, dynamic> menuData) async {
     try {
       final response = await _dio.post(
@@ -207,23 +202,21 @@ class ApiService {
       if (response.statusCode == 201) {
         return response.data;
       } else {
-        throw Exception('Error al crear menú: ${response.statusCode}');
+        throw Exception('Error al crear menu: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('No tienes permiso para crear menús');
+        throw Exception('No tienes permiso para crear menus');
       } else if (e.response?.statusCode == 400) {
-        throw Exception(e.response?.data['detail'] ?? 'Datos inválidos');
+        throw Exception(e.response?.data['detail'] ?? 'Datos invalidos');
       } else if (e.response?.statusCode == 401) {
-        throw Exception('No autenticado. Inicia sesión nuevamente.');
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
       } else {
-        throw Exception('Error al crear menú: ${e.message}');
+        throw Exception('Error al crear menu: ${e.message}');
       }
     }
   }
 
-  /// Obtener el menú actual (para el turno del usuario autenticado)
-  /// Si se pasa fecha, obtiene el menú para esa fecha específica
   Future<Map<String, dynamic>?> obtenerMenuActual({String? fecha}) async {
     try {
       final Map<String, dynamic> queryParams = {};
@@ -241,20 +234,19 @@ class ApiService {
       } else if (response.statusCode == 404) {
         return null;
       } else {
-        throw Exception('Error al obtener menú: ${response.statusCode}');
+        throw Exception('Error al obtener menu: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
         return null;
       } else if (e.response?.statusCode == 401) {
-        throw Exception('No autenticado. Inicia sesión nuevamente.');
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
       } else {
         throw Exception('Error al conectar con el servidor: ${e.message}');
       }
     }
   }
 
-  /// Obtener todos los menús creados por el cocinero actual
   Future<List<dynamic>> obtenerMisMenus() async {
     try {
       final response = await _dio.get('$baseUrl/menu/semanal/mis-menus');
@@ -262,20 +254,19 @@ class ApiService {
       if (response.statusCode == 200) {
         return response.data;
       } else {
-        throw Exception('Error al obtener menús: ${response.statusCode}');
+        throw Exception('Error al obtener menus: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Solo los cocineros pueden ver sus menús');
+        throw Exception('Solo los cocineros pueden ver sus menus');
       } else if (e.response?.statusCode == 401) {
-        throw Exception('No autenticado. Inicia sesión nuevamente.');
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
       } else {
-        throw Exception('Error al obtener menús: ${e.message}');
+        throw Exception('Error al obtener menus: ${e.message}');
       }
     }
   }
 
-  /// Obtener un menú por ID
   Future<Map<String, dynamic>> obtenerMenuPorId(int id) async {
     try {
       final response = await _dio.get('$baseUrl/menu/semanal/$id');
@@ -283,22 +274,21 @@ class ApiService {
       if (response.statusCode == 200) {
         return response.data;
       } else if (response.statusCode == 404) {
-        throw Exception('Menú no encontrado');
+        throw Exception('Menu no encontrado');
       } else {
-        throw Exception('Error al obtener menú: ${response.statusCode}');
+        throw Exception('Error al obtener menu: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        throw Exception('Menú no encontrado');
+        throw Exception('Menu no encontrado');
       } else if (e.response?.statusCode == 403) {
-        throw Exception('No tienes permiso para ver este menú');
+        throw Exception('No tienes permiso para ver este menu');
       } else {
-        throw Exception('Error al obtener menú: ${e.message}');
+        throw Exception('Error al obtener menu: ${e.message}');
       }
     }
   }
 
-  /// Actualizar un menú semanal (solo cocinero que lo creó o admin)
   Future<Map<String, dynamic>> actualizarMenu(int id, Map<String, dynamic> menuData) async {
     try {
       final response = await _dio.put(
@@ -309,36 +299,35 @@ class ApiService {
       if (response.statusCode == 200) {
         return response.data;
       } else {
-        throw Exception('Error al actualizar menú: ${response.statusCode}');
+        throw Exception('Error al actualizar menu: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('No tienes permiso para editar este menú');
+        throw Exception('No tienes permiso para editar este menu');
       } else if (e.response?.statusCode == 400) {
-        throw Exception(e.response?.data['detail'] ?? 'Datos inválidos');
+        throw Exception(e.response?.data['detail'] ?? 'Datos invalidos');
       } else if (e.response?.statusCode == 404) {
-        throw Exception('Menú no encontrado');
+        throw Exception('Menu no encontrado');
       } else {
-        throw Exception('Error al actualizar menú: ${e.message}');
+        throw Exception('Error al actualizar menu: ${e.message}');
       }
     }
   }
 
-  /// Eliminar un menú semanal (solo cocinero que lo creó o admin)
   Future<void> eliminarMenu(int id) async {
     try {
       final response = await _dio.delete('$baseUrl/menu/semanal/$id');
 
       if (response.statusCode != 204) {
-        throw Exception('Error al eliminar menú: ${response.statusCode}');
+        throw Exception('Error al eliminar menu: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('No tienes permiso para eliminar este menú');
+        throw Exception('No tienes permiso para eliminar este menu');
       } else if (e.response?.statusCode == 404) {
-        throw Exception('Menú no encontrado');
+        throw Exception('Menu no encontrado');
       } else {
-        throw Exception('Error al eliminar menú: ${e.message}');
+        throw Exception('Error al eliminar menu: ${e.message}');
       }
     }
   }
@@ -363,9 +352,9 @@ class ApiService {
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
-        throw Exception('No autenticado. Inicia sesión nuevamente.');
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
       } else if (e.response?.statusCode == 403) {
-        throw Exception('No tienes permisos para realizar esta acción.');
+        throw Exception('No tienes permisos para realizar esta accion.');
       } else {
         throw Exception('Error al conectar con el servidor: ${e.message}');
       }
@@ -423,14 +412,13 @@ class ApiService {
     }
   }
 
-  /// Obtener todos los menús para el administrador
   Future<List<dynamic>> obtenerTodosLosMenusAdmin() async {
     try {
       final response = await _dio.get('$baseUrl/menu/semanal/todos');
       if (response.statusCode == 200) {
         return response.data;
       } else {
-        throw Exception('Error al obtener los menús: ${response.statusCode}');
+        throw Exception('Error al obtener los menus: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
@@ -440,7 +428,6 @@ class ApiService {
     }
   }
 
-  /// Actualizar un usuario (solo admin)
   Future<User> updateUser({
     required String numeroEmpleado,
     required String nombre,
@@ -456,7 +443,7 @@ class ApiService {
         'nombre': nombre,
         'apellido': apellido,
       };
-      
+
       if (contrasena != null && contrasena.isNotEmpty) {
         data['contrasena'] = contrasena;
       }
@@ -486,7 +473,6 @@ class ApiService {
     }
   }
 
-  /// Eliminar un usuario (solo admin)
   Future<void> deleteUser(String numeroEmpleado) async {
     try {
       final response = await _dio.delete('$baseUrl/usuarios/$numeroEmpleado');
@@ -505,8 +491,8 @@ class ApiService {
     }
   }
 
-  /// Cambiar contraseña
-  Future<void> cambiarContrasena({
+  /// Cambiar contrasena
+  Future<Map<String, dynamic>> cambiarContrasena({
     required String contrasenaActual,
     required String nuevaContrasena,
   }) async {
@@ -519,8 +505,14 @@ class ApiService {
         },
       );
 
-      if (response.statusCode != 200) {
-        final detail = response.data?['detail'] ?? 'Error al cambiar contraseña';
+      if (response.statusCode == 200) {
+        if (response.data != null && response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        } else {
+          return {'message': 'Contrasena actualizada exitosamente'};
+        }
+      } else {
+        final detail = response.data?['detail'] ?? 'Error al cambiar contrasena';
         throw Exception(detail);
       }
     } on DioException catch (e) {

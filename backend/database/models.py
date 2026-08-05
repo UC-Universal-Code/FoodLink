@@ -35,6 +35,10 @@ class Usuario(Base):
     creado_en = Column(DateTime, default=datetime.utcnow)
     actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     estado = Column(String(32), nullable=False, default="active")
+    
+    # 👇 AGREGAR ESTAS COLUMNAS
+    es_temporal = Column(Boolean, default=True)
+    contrasena_temporal = Column(Boolean, default=True)
 
     departamento = relationship("Departamento", back_populates="usuarios")
     turno = relationship("Turno", back_populates="usuarios")
