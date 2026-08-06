@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 
 class ApiService {
-  static const String baseUrl = "http://127.0.0.1:8000";
+  static const String baseUrl = "http://192.168.0.24:8000";
   final Dio _dio = Dio();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 

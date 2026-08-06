@@ -1,5 +1,3 @@
-// lib/screens/auth/login_screen.dart
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,9 +15,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _empleadoIdController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  Timer? _timer;
 
   @override
   void dispose() {
+    _timer?.cancel();
     _empleadoIdController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -38,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
+      _timer?.cancel();
       final user = authProvider.currentUser;
       if (user != null) {
         switch (user.rol) {
@@ -57,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       final errorMsg = authProvider.errorMessage ?? 'Error al iniciar sesion';
       
+      // Si está bloqueado, el temporizador ya se está actualizando
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMsg),
@@ -70,6 +72,24 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+
+    
+    if (authProvider.isBloqueado && _timer == null) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        // Actualizar la UI cada segundo
+        if (mounted) {
+          // Forzar la actualización del provider
+          final provider = Provider.of<AuthProvider>(context, listen: false);
+          provider.notifyListeners();
+        }
+      });
+    }
+
+    
+    if (!authProvider.isBloqueado && _timer != null) {
+      _timer?.cancel();
+      _timer = null;
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -173,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                // Mostrar bloqueo con temporizador (se actualiza automáticamente)
+                // Mostrar bloqueo con temporizador
                 if (authProvider.isBloqueado)
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -205,8 +225,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Tiempo restante: ${authProvider.tiempoRestante}',
                           style: TextStyle(
                             color: Colors.red.shade700,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -277,7 +297,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final segundos = int.tryParse(partes[1]) ?? 0;
     final totalSegundos = minutos * 60 + segundos;
     
-    final maxSegundos = 15 * 60; // 15 minutos
+    
+    final maxSegundos = 60; // 1 minuto
     final progreso = 1 - (totalSegundos / maxSegundos);
     
     return progreso.clamp(0.0, 1.0);
