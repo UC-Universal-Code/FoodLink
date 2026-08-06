@@ -1,20 +1,17 @@
-// lib/services/api_service.dart
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 
 class ApiService {
-  static const String baseUrl = "http://localhost:8000"; // Cambia a la IP real del backend
+  static const String baseUrl = "http://192.168.0.24:8000";
   final Dio _dio = Dio();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   ApiService() {
-    // Configurar timeout
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
 
-    // Interceptor para agregar el token automáticamente
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -26,9 +23,7 @@ class ApiService {
         },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
-            // Token expirado o inválido - limpiar y redirigir al login
             await _storage.delete(key: 'access_token');
-            // Aquí puedes emitir un evento para redirigir al login
           }
           return handler.next(error);
         },
@@ -36,7 +31,7 @@ class ApiService {
     );
   }
 
-  /// Iniciar sesión con número de empleado y contraseña
+  /// Iniciar sesion con numero de empleado y contrasena
   Future<Map<String, String>> login(String numeroEmpleado, String contrasena) async {
     try {
       final response = await _dio.post(
@@ -49,6 +44,7 @@ class ApiService {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
+          validateStatus: (status) => status! < 500,
         ),
       );
 
@@ -56,7 +52,6 @@ class ApiService {
         final accessToken = response.data['access_token'] as String;
         final tokenType = response.data['token_type'] as String;
 
-        // Guardar token en almacenamiento seguro
         await _storage.write(key: 'access_token', value: accessToken);
 
         return {
@@ -64,16 +59,15 @@ class ApiService {
           'token_type': tokenType,
         };
       } else {
-        throw Exception('Error al iniciar sesión: ${response.statusCode}');
+        final detail = response.data?['detail'] ?? 'Error al iniciar sesion';
+        throw Exception(detail);
       }
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        throw Exception('Número de empleado o contraseña incorrectos');
-      } else if (e.type == DioExceptionType.connectionTimeout) {
-        throw Exception('Error de conexión. Verifica que el backend esté corriendo.');
-      } else {
-        throw Exception('Error al conectar con el servidor: ${e.message}');
+      if (e.response?.data != null) {
+        final detail = e.response?.data?['detail'] ?? e.message;
+        throw Exception(detail);
       }
+      throw Exception('Error al conectar con el servidor: ${e.message}');
     }
   }
 
@@ -92,8 +86,441 @@ class ApiService {
     }
   }
 
-  /// Cerrar sesión - eliminar token
+  /// Obtener la lista de todos los usuarios (solo admin)
+  Future<List<User>> getAllUsers() async {
+    try {
+      final response = await _dio.get('$baseUrl/usuarios/');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => User.fromJson(json)).toList();
+      } else {
+        throw Exception('Error al obtener usuarios: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('Se requiere rol de administrador');
+      } else if (e.response?.statusCode == 401) {
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
+      } else {
+        throw Exception('Error al obtener usuarios: ${e.message}');
+      }
+    }
+  }
+
+  /// Crear un nuevo usuario (solo admin)
+  Future<Map<String, dynamic>> createUser({
+    required String numeroEmpleado,
+    required String nombre,
+    required String apellido,
+    String? contrasena,
+    String rol = 'user',
+    String estado = 'active',
+    int? departamentoId,
+    int? turnoId,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'numero_empleado': numeroEmpleado,
+        'nombre': nombre,
+        'apellido': apellido,
+        'rol': rol,
+        'estado': estado,
+        'departamento_id': departamentoId,
+        'turno_id': turnoId,
+      };
+
+      if (contrasena != null && contrasena.isNotEmpty) {
+        data['contrasena'] = contrasena;
+      }
+
+      final response = await _dio.post(
+        '$baseUrl/usuarios/',
+        data: data,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw Exception('Error al crear usuario: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        throw Exception('El numero de empleado ya existe');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Se requiere rol de administrador');
+      } else {
+        throw Exception('Error al crear usuario: ${e.message}');
+      }
+    }
+  }
+
+  /// Obtener la lista de todos los turnos
+  Future<List<Map<String, dynamic>>> getTurnos() async {
+    try {
+      final response = await _dio.get('$baseUrl/usuarios/turnos');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => json as Map<String, dynamic>).toList();
+      } else {
+        throw Exception('Error al obtener turnos: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al obtener turnos: ${e.message}');
+    }
+  }
+
+  /// Obtener la lista de todos los departamentos
+  Future<List<Map<String, dynamic>>> getDepartamentos() async {
+    try {
+      final response = await _dio.get('$baseUrl/usuarios/departamentos');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => json as Map<String, dynamic>).toList();
+      } else {
+        throw Exception('Error al obtener departamentos: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al obtener departamentos: ${e.message}');
+    }
+  }
+
+  /// Cerrar sesion - eliminar token
   Future<void> logout() async {
     await _storage.delete(key: 'access_token');
+  }
+
+  // ========== MENU SEMANAL ==========
+
+  Future<Map<String, dynamic>> crearMenuSemanal(Map<String, dynamic> menuData) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/menu/semanal',
+        data: menuData,
+      );
+
+      if (response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw Exception('Error al crear menu: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permiso para crear menus');
+      } else if (e.response?.statusCode == 400) {
+        throw Exception(e.response?.data['detail'] ?? 'Datos invalidos');
+      } else if (e.response?.statusCode == 401) {
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
+      } else {
+        throw Exception('Error al crear menu: ${e.message}');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>?> obtenerMenuActual({String? fecha}) async {
+    try {
+      final Map<String, dynamic> queryParams = {};
+      if (fecha != null && fecha.isNotEmpty) {
+        queryParams['fecha'] = fecha;
+      }
+
+      final response = await _dio.get(
+        '$baseUrl/menu/semanal/actual/',
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        throw Exception('Error al obtener menu: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return null;
+      } else if (e.response?.statusCode == 401) {
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
+      } else {
+        throw Exception('Error al conectar con el servidor: ${e.message}');
+      }
+    }
+  }
+
+  Future<List<dynamic>> obtenerMisMenus() async {
+    try {
+      final response = await _dio.get('$baseUrl/menu/semanal/mis-menus');
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al obtener menus: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('Solo los cocineros pueden ver sus menus');
+      } else if (e.response?.statusCode == 401) {
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
+      } else {
+        throw Exception('Error al obtener menus: ${e.message}');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerMenuPorId(int id) async {
+    try {
+      final response = await _dio.get('$baseUrl/menu/semanal/$id');
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else if (response.statusCode == 404) {
+        throw Exception('Menu no encontrado');
+      } else {
+        throw Exception('Error al obtener menu: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('Menu no encontrado');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permiso para ver este menu');
+      } else {
+        throw Exception('Error al obtener menu: ${e.message}');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> actualizarMenu(int id, Map<String, dynamic> menuData) async {
+    try {
+      final response = await _dio.put(
+        '$baseUrl/menu/semanal/$id',
+        data: menuData,
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al actualizar menu: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permiso para editar este menu');
+      } else if (e.response?.statusCode == 400) {
+        throw Exception(e.response?.data['detail'] ?? 'Datos invalidos');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Menu no encontrado');
+      } else {
+        throw Exception('Error al actualizar menu: ${e.message}');
+      }
+    }
+  }
+
+  Future<void> eliminarMenu(int id) async {
+    try {
+      final response = await _dio.delete('$baseUrl/menu/semanal/$id');
+
+      if (response.statusCode != 204) {
+        throw Exception('Error al eliminar menu: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permiso para eliminar este menu');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Menu no encontrado');
+      } else {
+        throw Exception('Error al eliminar menu: ${e.message}');
+      }
+    }
+  }
+
+  // ========== REPORTES ==========
+
+  Future<Map<String, dynamic>> crearReporte(String titulo, String descripcion) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/reportes/',
+        data: {
+          'titulo': titulo,
+          'descripcion': descripcion,
+          'estado': 'Pendiente',
+        },
+      );
+
+      if (response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw Exception('Error al crear reporte: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('No autenticado. Inicia sesion nuevamente.');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permisos para realizar esta accion.');
+      } else {
+        throw Exception('Error al conectar con el servidor: ${e.message}');
+      }
+    }
+  }
+
+  Future<List<dynamic>> obtenerReportes() async {
+    try {
+      final response = await _dio.get('$baseUrl/reportes/');
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al obtener reportes: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  Future<void> actualizarEstadoReporte(int id, String nuevoEstado) async {
+    try {
+      final response = await _dio.put(
+        '$baseUrl/reportes/$id',
+        data: {'estado': nuevoEstado},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Error al actualizar estado');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  Future<void> eliminarReporte(int id) async {
+    try {
+      final response = await _dio.delete('$baseUrl/reportes/$id');
+      if (response.statusCode != 204 && response.statusCode != 200) {
+        throw Exception('Error al eliminar reporte');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerPerfil() async {
+    try {
+      final response = await _dio.get('$baseUrl/usuarios/me');
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al obtener el perfil: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  Future<List<dynamic>> obtenerTodosLosMenusAdmin() async {
+    try {
+      final response = await _dio.get('$baseUrl/menu/semanal/todos');
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al obtener los menus: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('Se requiere rol de administrador');
+      }
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
+  }
+
+  Future<User> updateUser({
+    required String numeroEmpleado,
+    required String nombre,
+    required String apellido,
+    String? contrasena,
+    String? rol,
+    String? estado,
+    int? departamentoId,
+    int? turnoId,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'nombre': nombre,
+        'apellido': apellido,
+      };
+
+      if (contrasena != null && contrasena.isNotEmpty) {
+        data['contrasena'] = contrasena;
+      }
+      if (rol != null) data['rol'] = rol;
+      if (estado != null) data['estado'] = estado;
+      if (departamentoId != null) data['departamento_id'] = departamentoId;
+      if (turnoId != null) data['turno_id'] = turnoId;
+
+      final response = await _dio.put(
+        '$baseUrl/usuarios/$numeroEmpleado',
+        data: data,
+      );
+
+      if (response.statusCode == 200) {
+        return User.fromJson(response.data);
+      } else {
+        throw Exception('Error al actualizar usuario: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No tienes permiso para editar este usuario');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Usuario no encontrado');
+      } else {
+        throw Exception('Error al actualizar usuario: ${e.message}');
+      }
+    }
+  }
+
+  Future<void> deleteUser(String numeroEmpleado) async {
+    try {
+      final response = await _dio.delete('$baseUrl/usuarios/$numeroEmpleado');
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al eliminar usuario: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('No se puede eliminar al administrador principal');
+      } else if (e.response?.statusCode == 404) {
+        throw Exception('Usuario no encontrado');
+      } else {
+        throw Exception('Error al eliminar usuario: ${e.message}');
+      }
+    }
+  }
+
+  /// Cambiar contrasena
+  Future<Map<String, dynamic>> cambiarContrasena({
+    required String contrasenaActual,
+    required String nuevaContrasena,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/usuarios/cambiar-contrasena',
+        data: {
+          'contrasena_actual': contrasenaActual,
+          'nueva_contrasena': nuevaContrasena,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        if (response.data != null && response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        } else {
+          return {'message': 'Contrasena actualizada exitosamente'};
+        }
+      } else {
+        final detail = response.data?['detail'] ?? 'Error al cambiar contrasena';
+        throw Exception(detail);
+      }
+    } on DioException catch (e) {
+      if (e.response?.data != null) {
+        final detail = e.response?.data?['detail'] ?? e.message;
+        throw Exception(detail);
+      }
+      throw Exception('Error al conectar con el servidor: ${e.message}');
+    }
   }
 }

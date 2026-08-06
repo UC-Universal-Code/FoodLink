@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
+import 'cocinero/crear_menu_screen.dart';
+import 'cocinero/mis_menus_screen.dart';
 
 class CocineroHome extends StatelessWidget {
   const CocineroHome({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = authProvider.currentUser;
+    
+    String nombreCompleto = user != null 
+        ? '${user.nombre} ${user.apellido}' 
+        : 'Cocinero';
+    
+    // Obtener el nombre del turno desde UserProvider
+    String turno = userProvider.getTurnoNombre(user?.turnoId) ?? 'Sin turno asignado';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('FoodLink - Cocinero'),
@@ -24,15 +40,46 @@ class CocineroHome extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Panel del Cocinero',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF20303D),
+            // Información del cocinero
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF20303D).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Bienvenido, $nombreCompleto',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF20303D),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.schedule,
+                        size: 16,
+                        color: Color(0xFF20303D),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Turno asignado: $turno',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF20303D),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             const Text(
               'Funcionalidades disponibles:',
               style: TextStyle(fontSize: 16),
@@ -42,12 +89,13 @@ class CocineroHome extends StatelessWidget {
               context,
               icon: Icons.add,
               title: 'Crear Menú Semanal',
-              subtitle: 'Registrar platillos para la semana (C4)',
+              subtitle: 'Registrar platillos para la semana',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Crear menú semanal (C4)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CrearMenuScreen(),
                   ),
                 );
               },
@@ -56,12 +104,13 @@ class CocineroHome extends StatelessWidget {
               context,
               icon: Icons.edit,
               title: 'Editar Menú',
-              subtitle: 'Modificar platillos del menú (C5)',
+              subtitle: 'Modificar platillos del menú',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Editar menú (C5)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MisMenusScreen(),
                   ),
                 );
               },
@@ -73,9 +122,10 @@ class CocineroHome extends StatelessWidget {
               subtitle: 'Consultar menú publicado',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Visualizar menú (C6)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MisMenusScreen(),
                   ),
                 );
               },

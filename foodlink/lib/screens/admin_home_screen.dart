@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:foodlink/screens/admin/gestionar_incidencias_screen.dart';
+import 'package:foodlink/screens/admin/ver_menus_screen.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -45,11 +47,8 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Alta, baja y modificación de usuarios',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Gestión de usuarios (C3, C9)'),
-                  ),
-                );
+                // Navegar a la pantalla de lista de usuarios
+                Navigator.pushNamed(context, '/admin/users');
               },
             ),
             _buildMenuItem(
@@ -59,9 +58,11 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Revisar y dar seguimiento a reportes',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Gestión de incidencias (C8)'),
+                // CORREGIDO: Se cerraron correctamente los paréntesis
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GestionarIncidenciasScreen(),
                   ),
                 );
               },
@@ -73,9 +74,10 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Consultar menús de todos los turnos',
               color: const Color(0xFF20303D),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad: Visualización de menús (C6)'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const VerMenusScreen(),
                   ),
                 );
               },
